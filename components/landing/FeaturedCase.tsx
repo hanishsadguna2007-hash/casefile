@@ -4,13 +4,15 @@ import React from 'react';
 import Link from 'next/link';
 import { Mystery } from '@/types/mystery';
 import { getRankBadgeColor, getCategoryBadgeColor } from '@/lib/utils';
-import { ArrowRight, Clock, Users, FileSearch, ShieldAlert } from 'lucide-react';
+import { ArrowRight, Clock, Users, FileSearch, ShieldAlert, Lock } from 'lucide-react';
+import { useAuth } from '@/lib/auth/authContext';
 
 interface FeaturedCaseProps {
   mystery: Mystery;
 }
 
 export default function FeaturedCase({ mystery }: FeaturedCaseProps) {
+  const { user, openAuthModal } = useAuth();
   const catColors = getCategoryBadgeColor(mystery.category);
 
   return (
@@ -128,13 +130,23 @@ export default function FeaturedCase({ mystery }: FeaturedCaseProps) {
             </div>
 
             <div className="pt-6">
-              <Link
-                href={`/cases/${mystery.id}`}
-                className="w-full flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence/90 hover:bg-evidence text-white px-5 py-3 font-mono text-xs uppercase tracking-widest transition-all"
-              >
-                <span>OPEN CASE FILE</span>
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+              {user ? (
+                <Link
+                  href={`/cases/${mystery.id}`}
+                  className="w-full flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence/90 hover:bg-evidence text-white px-5 py-3 font-mono text-xs uppercase tracking-widest transition-all active:scale-95"
+                >
+                  <span>OPEN CASE FILE</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              ) : (
+                <button
+                  onClick={() => openAuthModal(`Security clearance required. Please sign in or register to open case ${mystery.caseNumber}: ${mystery.title}`)}
+                  className="w-full flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence/90 hover:bg-evidence text-white px-5 py-3 font-mono text-xs uppercase tracking-widest transition-all active:scale-95 shadow-md"
+                >
+                  <Lock className="h-4 w-4" />
+                  <span>OPEN CASE FILE</span>
+                </button>
+              )}
             </div>
           </div>
 

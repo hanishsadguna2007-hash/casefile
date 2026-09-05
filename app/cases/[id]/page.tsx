@@ -25,13 +25,15 @@ import {
   CheckCircle2, 
   FolderLock, 
   ShieldAlert,
-  AlertTriangle
+  AlertTriangle,
+  KeyRound,
+  Lock
 } from 'lucide-react';
 
 export default function CaseInvestigationPage() {
   const params = useParams();
   const router = useRouter();
-  const { refreshProfile } = useAuth();
+  const { user, loading, openAuthModal, refreshProfile } = useAuth();
   const caseId = params.id as string;
 
   const mystery = getMysteryById(caseId);
@@ -50,7 +52,7 @@ export default function CaseInvestigationPage() {
 
   // Load persistent case progress
   useEffect(() => {
-    if (mystery) {
+    if (mystery && user) {
       const progress = caseRepo.getCaseProgress(mystery.id);
       setSuspectStatuses(progress.suspectStatuses || {});
       setPinnedEvidenceIds(progress.pinnedEvidenceIds || []);
@@ -60,7 +62,20 @@ export default function CaseInvestigationPage() {
       setHintsRevealedCount(progress.hintsRevealedCount || 0);
       setIsSolved(progress.status === 'solved');
     }
-  }, [mystery]);
+  }, [mystery, user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-detective-950">
+        <div className="rounded border border-detective-800 bg-detective-900 p-8 text-center max-w-md space-y-4 shadow-2xl">
+          <div className="h-10 w-10 border-2 border-evidence border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="font-mono text-xs uppercase tracking-widest text-neutral-300">
+            Verifying Detective Clearance...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!mystery) {
     return (
@@ -79,6 +94,76 @@ export default function CaseInvestigationPage() {
           >
             Return to Case Archives
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Security Clearance Gate: User must be signed in or registered to play
+  if (!user) {
+    return (
+      <div className="min-h-screen py-12 sm:py-20 px-4 sm:px-6 flex items-center justify-center bg-detective-950 relative overflow-hidden">
+        <div className="absolute inset-0 investigation-grid opacity-20 pointer-events-none" />
+        
+        <div className="relative max-w-lg w-full rounded border border-detective-700 bg-detective-900 shadow-2xl overflow-hidden">
+          {/* Header File Stamp */}
+          <div className="flex items-center justify-between border-b border-detective-800 bg-detective-950 px-5 sm:px-6 py-4">
+            <div className="flex items-center space-x-2">
+              <ShieldAlert className="h-5 w-5 text-evidence" />
+              <span className="font-mono text-xs uppercase tracking-widest text-neutral-300 font-semibold">
+                Clearance Gate // Level 2
+              </span>
+            </div>
+            <span className="stamp-confidential text-[10px]">RESTRICTED</span>
+          </div>
+
+          <div className="p-6 sm:p-8 space-y-6">
+            <div className="flex justify-center">
+              <div className="h-16 w-16 rounded-full border border-amber-500/40 bg-amber-950/30 flex items-center justify-center text-amber-400 shadow-inner">
+                <Lock className="h-8 w-8" />
+              </div>
+            </div>
+
+            <div className="text-center space-y-2">
+              <div className="font-mono text-xs text-evidence font-bold tracking-wider uppercase">
+                {mystery.caseNumber} • {mystery.categoryDisplay}
+              </div>
+              <h2 className="font-serif text-2xl sm:text-3xl text-neutral-100 font-bold tracking-tight">
+                {mystery.title}
+              </h2>
+              <p className="font-serif italic text-xs text-neutral-400">
+                {mystery.setting}
+              </p>
+            </div>
+
+            <div className="rounded border border-amber-800/40 bg-amber-950/20 p-4 text-xs font-mono text-neutral-300 space-y-2">
+              <div className="flex items-center space-x-1.5 text-amber-400 font-bold uppercase tracking-wider text-[11px]">
+                <ShieldAlert className="h-4 w-4 shrink-0" />
+                <span>Authentication Required</span>
+              </div>
+              <p className="leading-relaxed font-sans text-neutral-400 text-xs">
+                Active crime scenes, autopsy reports, suspect interrogations, and the Solution Chamber are strictly restricted to registered detectives. Sign in or register your clearance to begin investigating this case.
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <button
+                onClick={() => openAuthModal(`Sign in or register to open case ${mystery.caseNumber}: ${mystery.title}`)}
+                className="w-full flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence hover:bg-evidence-dark text-white px-5 py-3 font-mono text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
+              >
+                <KeyRound className="h-4 w-4" />
+                <span>Sign In / Register Clearance</span>
+              </button>
+
+              <Link
+                href="/cases"
+                className="w-full flex items-center justify-center space-x-2 rounded border border-detective-700 bg-detective-950 hover:bg-detective-850 text-neutral-300 hover:text-white px-5 py-2.5 font-mono text-xs uppercase tracking-widest transition-all"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Return to Case Archives</span>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     );

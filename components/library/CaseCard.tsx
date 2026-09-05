@@ -4,7 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { Mystery } from '@/types/mystery';
 import { getCategoryBadgeColor } from '@/lib/utils';
-import { Clock, Users, FileSearch, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Clock, Users, FileSearch, ArrowRight, CheckCircle2, Lock } from 'lucide-react';
+import { useAuth } from '@/lib/auth/authContext';
 
 interface CaseCardProps {
   mystery: Mystery;
@@ -12,6 +13,7 @@ interface CaseCardProps {
 }
 
 export default function CaseCard({ mystery, isSolved = false }: CaseCardProps) {
+  const { user, openAuthModal } = useAuth();
   const catColors = getCategoryBadgeColor(mystery.category);
 
   return (
@@ -93,10 +95,16 @@ export default function CaseCard({ mystery, isSolved = false }: CaseCardProps) {
 
         <Link
           href={`/cases/${mystery.id}`}
+          onClick={(e) => {
+            if (!user) {
+              e.preventDefault();
+              openAuthModal(`Security clearance required. Please sign in or register to open case ${mystery.caseNumber}: ${mystery.title}`);
+            }
+          }}
           className="inline-flex items-center space-x-1.5 rounded border border-detective-700 bg-detective-950 hover:border-evidence hover:bg-evidence hover:text-white px-3.5 py-1.5 font-mono text-xs uppercase tracking-wider text-neutral-200 transition-colors active:scale-95 shrink-0"
         >
           <span>Investigate</span>
-          <ArrowRight className="h-3 w-3" />
+          {!user ? <Lock className="h-3 w-3 text-amber-400" /> : <ArrowRight className="h-3 w-3" />}
         </Link>
       </div>
     </div>

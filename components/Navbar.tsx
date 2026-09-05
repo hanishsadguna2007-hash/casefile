@@ -18,14 +18,13 @@ import {
   ChevronRight,
   ShieldCheck,
   Flame,
-  KeyRound
+  KeyRound,
+  Lock
 } from 'lucide-react';
-import AuthModal from './AuthModal';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { user, logout, isAdmin } = useAuth();
-  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const { user, logout, isAdmin, openAuthModal } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => pathname === path;
@@ -127,42 +126,33 @@ export default function Navbar() {
                   </span>
                 </Link>
 
-                {user.isGuest ? (
-                  <button
-                    onClick={() => setAuthModalOpen(true)}
-                    className="text-xs font-mono uppercase tracking-wider text-amber-400 hover:text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded bg-amber-950/20 hover:bg-amber-950/40 transition-colors"
-                  >
-                    Save Progress
-                  </button>
-                ) : (
-                  <button
-                    onClick={logout}
-                    title="Sign Out"
-                    className="p-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-detective-850 rounded transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </button>
-                )}
+                <button
+                  onClick={logout}
+                  title="Sign Out"
+                  className="p-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-detective-850 rounded transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
               </div>
             ) : (
               <button
-                onClick={() => setAuthModalOpen(true)}
-                className="flex items-center space-x-1.5 rounded border border-detective-700 bg-detective-850 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-neutral-200 hover:border-evidence hover:text-evidence transition-colors"
+                onClick={() => openAuthModal()}
+                className="flex items-center space-x-1.5 rounded border border-evidence bg-evidence/90 hover:bg-evidence px-3.5 py-1.5 text-xs font-mono uppercase tracking-wider text-white transition-colors active:scale-95 shadow-sm"
               >
-                <ShieldAlert className="h-3.5 w-3.5" />
-                <span>Access Terminal</span>
+                <KeyRound className="h-3.5 w-3.5" />
+                <span>Sign In / Register</span>
               </button>
             )}
           </div>
 
           {/* Mobile Right Controls: Compact Rank Badge + Hamburger */}
           <div className="flex md:hidden items-center space-x-2">
-            {user && (
+            {user ? (
               <Link
                 href="/profile"
                 className="flex items-center space-x-1.5 rounded-full border border-detective-800 bg-detective-900/90 px-2.5 py-1 text-[11px] font-mono active:scale-95 transition-transform"
               >
-                <span className={`h-2 w-2 rounded-full ${user.isGuest ? 'bg-amber-500' : 'bg-emerald-400 animate-pulse'}`} />
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-neutral-300 font-medium truncate max-w-[85px]">
                   {user.username}
                 </span>
@@ -170,6 +160,14 @@ export default function Navbar() {
                   {user.xp} XP
                 </span>
               </Link>
+            ) : (
+              <button
+                onClick={() => openAuthModal()}
+                className="flex items-center space-x-1 rounded border border-evidence/80 bg-evidence/20 px-2.5 py-1 text-[11px] font-mono text-evidence active:scale-95 transition-transform"
+              >
+                <KeyRound className="h-3 w-3" />
+                <span>Sign In</span>
+              </button>
             )}
 
             <button
@@ -243,34 +241,31 @@ export default function Navbar() {
                     <span className="text-neutral-400">Deduction XP:</span>
                     <span className="text-amber-400 font-bold">{user.xp} XP</span>
                   </div>
-
-                  {user.isGuest ? (
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        setAuthModalOpen(true);
-                      }}
-                      className="w-full mt-2 flex items-center justify-center space-x-2 rounded border border-amber-500/40 bg-amber-950/30 hover:bg-amber-950/50 py-2 text-xs font-mono uppercase tracking-wider text-amber-300 transition-colors"
-                    >
-                      <ShieldAlert className="h-3.5 w-3.5" />
-                      <span>Save Progress to Cloud</span>
-                    </button>
-                  ) : null}
                 </div>
               ) : (
                 <div className="p-4 m-3 rounded border border-detective-800 bg-detective-900/60 text-center space-y-3">
-                  <p className="text-xs font-sans text-neutral-400">
-                    Sign in to track solved cases, earn detective XP, and sync case notes.
-                  </p>
+                  <div className="flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-full border border-detective-700 bg-detective-950 flex items-center justify-center text-evidence">
+                      <KeyRound className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-mono text-xs uppercase font-bold text-neutral-200">
+                      Identification Required
+                    </div>
+                    <p className="text-xs font-sans text-neutral-400">
+                      Sign in or register your dossier to investigate crimes, question suspects, and track solved cases.
+                    </p>
+                  </div>
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      setAuthModalOpen(true);
+                      openAuthModal();
                     }}
-                    className="w-full flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence py-2.5 text-xs font-mono uppercase tracking-wider text-white"
+                    className="w-full flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence hover:bg-evidence-dark py-2.5 text-xs font-mono uppercase tracking-wider text-white shadow-md active:scale-95"
                   >
                     <ShieldAlert className="h-4 w-4" />
-                    <span>Access Terminal</span>
+                    <span>Sign In / Register Clearance</span>
                   </button>
                 </div>
               )}
@@ -333,7 +328,7 @@ export default function Navbar() {
 
             {/* Bottom Actions */}
             <div className="p-4 border-t border-detective-800 bg-detective-900/40 space-y-3">
-              {user && !user.isGuest ? (
+              {user ? (
                 <button
                   onClick={() => {
                     logout();
@@ -348,9 +343,9 @@ export default function Navbar() {
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    setAuthModalOpen(true);
+                    openAuthModal();
                   }}
-                  className="w-full flex items-center justify-center space-x-2 rounded border border-detective-700 bg-detective-900 hover:bg-detective-850 py-2.5 text-xs font-mono uppercase tracking-wider text-neutral-300 transition-colors"
+                  className="w-full flex items-center justify-center space-x-2 rounded border border-evidence/70 bg-evidence/20 hover:bg-evidence/30 py-2.5 text-xs font-mono uppercase tracking-wider text-evidence transition-colors"
                 >
                   <KeyRound className="h-4 w-4 text-evidence" />
                   <span>Investigator Sign In</span>
@@ -365,8 +360,6 @@ export default function Navbar() {
           </div>
         </div>
       )}
-
-      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </>
   );
 }

@@ -8,11 +8,13 @@ import { caseRepo } from '@/lib/storage/caseRepository';
 import CaseCard from '@/components/library/CaseCard';
 import CaseFilterBar from '@/components/library/CaseFilterBar';
 import EmptyState from '@/components/library/EmptyState';
-import { FolderLock } from 'lucide-react';
+import { FolderLock, ShieldAlert } from 'lucide-react';
+import { useAuth } from '@/lib/auth/authContext';
 
 function CasesLibraryContent() {
   const searchParams = useSearchParams();
   const initialCat = (searchParams.get('cat') as MysteryCategory) || 'all';
+  const { user, openAuthModal } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MysteryCategory | 'all'>(initialCat);
@@ -22,15 +24,16 @@ function CasesLibraryContent() {
 
   // Load user progress to check which cases are solved
   useEffect(() => {
-    const profile = caseRepo.getUserProfile();
     const solvedSet = new Set<string>();
-    Object.entries(profile.progress || {}).forEach(([cid, prog]) => {
-      if (prog.status === 'solved') {
-        solvedSet.add(cid);
-      }
-    });
+    if (user?.progress) {
+      Object.entries(user.progress).forEach(([cid, prog]) => {
+        if (prog.status === 'solved') {
+          solvedSet.add(cid);
+        }
+      });
+    }
     setSolvedCaseIds(solvedSet);
-  }, []);
+  }, [user]);
 
   // Sync category with URL search param if changed externally
   useEffect(() => {
@@ -108,6 +111,29 @@ function CasesLibraryContent() {
           </span>
         </div>
       </div>
+
+      {/* Public Archive Preview Alert when not authenticated */}
+      {!user && (
+        <div className="mb-6 rounded border border-amber-800/60 bg-amber-950/30 p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center space-x-2.5">
+            <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
+            <div className="text-xs">
+              <span className="font-mono uppercase font-bold text-amber-300 block sm:inline mr-2">
+                Public Archive Preview:
+              </span>
+              <span className="text-neutral-300">
+                You are browsing case summaries. Sign in or register your clearance to open crime scenes, analyze clues, and solve cases.
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => openAuthModal('Sign in or register to open and investigate active case dossiers.')}
+            className="shrink-0 rounded border border-amber-500/50 bg-amber-950/60 hover:bg-amber-900/60 text-amber-200 px-4 py-1.5 text-xs font-mono uppercase tracking-wider transition-colors active:scale-95"
+          >
+            Sign In / Register
+          </button>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <CaseFilterBar

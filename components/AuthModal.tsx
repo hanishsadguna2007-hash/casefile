@@ -8,10 +8,11 @@ import { ShieldAlert, X, User, KeyRound, ArrowRight, ShieldCheck } from 'lucide-
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  reason?: string;
 }
 
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { loginWithEmail, signup, loginWithGoogle, loginAsGuest, isFirebaseReady } = useAuth();
+export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
+  const { loginWithEmail, signup, loginWithGoogle, isFirebaseReady } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -63,11 +64,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
   };
 
-  const handleGuest = () => {
-    loginAsGuest();
-    onClose();
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
       <div className="relative w-full max-w-md max-h-[92vh] flex flex-col rounded-t-2xl sm:rounded-lg border border-detective-700 bg-detective-900 shadow-2xl overflow-hidden animate-slide-up sm:animate-none">
@@ -92,7 +88,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         <div className="p-5 sm:p-6 overflow-y-auto">
           <div className="mb-5 sm:mb-6">
             <div className="flex items-center justify-between mb-3">
-              <span className="stamp-confidential">RESTRICTED DOSSIER</span>
+              <span className="stamp-confidential">RESTRICTED ACCESS</span>
               <div className="flex items-center space-x-1 font-mono text-[10px] text-emerald-400 bg-emerald-950/50 border border-emerald-800/40 px-2 py-0.5 rounded">
                 <ShieldCheck className="h-3 w-3" />
                 <span>FIREBASE SECURED</span>
@@ -102,9 +98,21 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               {isSignUp ? 'New Investigator Registration' : 'Investigator Sign-In'}
             </h3>
             <p className="font-sans text-xs text-neutral-400 mt-1">
-              Firebase authenticated detectives receive cloud synchronization of case notes, solved logs, and rank XP.
+              {isSignUp 
+                ? 'Create your permanent investigator profile to open crime scenes, examine clues, and close cases.' 
+                : 'Enter your credentials to unlock case dossiers, question suspects, and access the Solution Chamber.'}
             </p>
           </div>
+
+          {reason && (
+            <div className="mb-4 rounded border border-amber-800/60 bg-amber-950/40 p-3 text-xs text-amber-300 font-mono flex items-start space-x-2">
+              <ShieldAlert className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold uppercase tracking-wider block text-[10px] text-amber-400">Clearance Required</span>
+                <span>{reason}</span>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 rounded border border-red-800/50 bg-red-950/30 p-2.5 text-xs text-red-300 font-mono">
@@ -117,7 +125,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             type="button"
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full flex items-center justify-center space-x-3 rounded border border-detective-700 bg-detective-950 hover:bg-detective-850 hover:border-detective-600 px-4 py-2.5 text-xs font-mono uppercase tracking-wider text-neutral-200 transition-colors shadow-sm mb-4"
+            className="w-full flex items-center justify-center space-x-3 rounded border border-detective-700 bg-detective-950 hover:bg-detective-850 hover:border-detective-600 px-4 py-2.5 text-xs font-mono uppercase tracking-wider text-neutral-200 transition-colors shadow-sm mb-4 active:scale-95"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path
@@ -200,7 +208,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence/90 hover:bg-evidence px-4 py-2.5 text-xs font-mono uppercase tracking-widest text-white transition-colors mt-2"
+              className="w-full flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence/90 hover:bg-evidence px-4 py-2.5 text-xs font-mono uppercase tracking-widest text-white transition-colors mt-2 active:scale-95"
             >
               <span>{loading ? 'Verifying Credentials...' : isSignUp ? 'Create Firebase Dossier' : 'Authenticate Dossier'}</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -221,26 +229,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 : 'Need clearance? Register New Investigator'}
             </button>
           </div>
-
-          <div className="relative my-5">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-detective-800" />
-            </div>
-            <div className="relative flex justify-center text-[10px] font-mono uppercase tracking-widest">
-              <span className="bg-detective-900 px-2 text-neutral-500">OR QUICK TRIAL</span>
-            </div>
-          </div>
-
-          {/* Guest Access Button */}
-          <button
-            onClick={handleGuest}
-            className="w-full flex items-center justify-center space-x-2 rounded border border-detective-700 bg-detective-850 hover:bg-detective-800 hover:border-detective-600 px-4 py-2 text-xs font-mono uppercase tracking-wider text-neutral-300 transition-colors"
-          >
-            <span>Proceed as Guest Investigator</span>
-          </button>
-          <p className="text-[10px] font-mono text-neutral-500 text-center mt-2">
-            Guest progress saves locally to this browser session.
-          </p>
         </div>
       </div>
     </div>

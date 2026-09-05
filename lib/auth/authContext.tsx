@@ -19,13 +19,19 @@ import {
   updateProfile as firebaseUpdateProfile,
   User as FirebaseUser,
 } from 'firebase/auth';
+import AuthModal from '@/components/AuthModal';
 
 interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   isAdmin: boolean;
+  isAuthenticated: boolean;
   isFirebaseReady: boolean;
+  authModalOpen: boolean;
+  authModalReason: string;
+  openAuthModal: (reason?: string) => void;
+  closeAuthModal: () => void;
   loginAsGuest: () => void;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   signup: (username: string, email: string, pass: string) => Promise<void>;
@@ -41,20 +47,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalReason, setAuthModalReason] = useState('');
+
+  const openAuthModal = (reason?: string) => {
+    setAuthModalReason(reason || '');
+    setAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setAuthModalOpen(false);
+    setAuthModalReason('');
+  };
 
   // Load and refresh current detective dossier
   const refreshProfile = () => {
-    const profile = caseRepo.getUserProfile();
-    // Dynamically calculate rank from XP
-    profile.rank = calculateRank(profile.xp);
-    setUser({ ...profile });
+    const fbUser = auth?.currentUser;
+    if (!fbUser) {
+      setUser(null);
+      return;
+    }
+    const profile = caseRepo.getUserProfile(fbUser.uid);
+    if (profile) {
+      profile.rank = calculateRank(profile.xp);
+      setUser({ ...profile });
+    } else {
+      setUser(null);
+    }
   };
 
   // Synchronize Firebase auth state
   useEffect(() => {
     if (!auth) {
-      // Local fallback mode when Firebase credentials are not provided
-      refreshProfile();
+      // Unauthenticated fallback when Firebase is offline
+      setUser(null);
       setLoading(false);
       return;
     }
@@ -67,8 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         caseRepo.setActiveUserId(fbUser.uid);
         let profile = caseRepo.getUserProfile(fbUser.uid);
 
-        // If newly created or first time loading this UID, populate dossier
-        if (!profile || profile.id !== fbUser.uid) {
+        // If newly created, first time loading this UID, or marked as guest, populate real dossier
+        if (!profile || profile.id !== fbUser.uid || profile.isGuest) {
           const defaultName = fbUser.displayName || fbUser.email?.split('@')[0] || 'Investigator';
           const capitalizedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
           
@@ -96,9 +122,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile.rank = calculateRank(profile.xp);
         setUser({ ...profile });
       } else {
-        // Unauthenticated or Guest session
+        // Unauthenticated - require login to move forward
         caseRepo.setActiveUserId(null);
-        refreshProfile();
+        setUser(null);
       }
 
       setLoading(false);
@@ -107,13 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const loginAsGuest = async () => {
-    if (auth && auth.currentUser) {
-      await signOut(auth);
-    }
-    caseRepo.setActiveUserId(null);
-    caseRepo.saveUserProfile(INITIAL_GUEST_PROFILE);
-    refreshProfile();
+  const loginAsGuest = () => {
+    openAuthModal('Security Clearance Required. Please log in or create an account to proceed.');
   };
 
   const loginWithEmail = async (email: string, pass: string): Promise<void> => {
@@ -228,24 +249,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signOut(auth);
     }
     caseRepo.setActiveUserId(null);
-    caseRepo.saveUserProfile(INITIAL_GUEST_PROFILE);
-    refreshProfile();
+    setUser(null);
+    setFirebaseUser(null);
   };
 
   const updateUsername = async (name: string): Promise<void> => {
     const cleanName = name.trim();
-    if (!cleanName) return;
+    if (!cleanName || !auth?.currentUser) return;
 
-    if (auth?.currentUser) {
-      await firebaseUpdateProfile(auth.currentUser, {
-        displayName: cleanName,
-      });
+    await firebaseUpdateProfile(auth.currentUser, {
+      displayName: cleanName,
+    });
+
+    const profile = caseRepo.getUserProfile(auth.currentUser.uid);
+    if (profile) {
+      profile.username = cleanName;
+      caseRepo.saveUserProfile(profile, auth.currentUser.uid);
+      refreshProfile();
     }
-
-    const profile = caseRepo.getUserProfile();
-    profile.username = cleanName;
-    caseRepo.saveUserProfile(profile);
-    refreshProfile();
   };
 
   // Determine if the current authenticated user has administrative clearance
@@ -262,6 +283,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     adminEmails.includes(currentUserEmail)
   );
 
+  const isAuthenticated = Boolean(
+    user && 
+    !user.isGuest && 
+    (firebaseUser !== null || !isFirebaseConfigured)
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -269,7 +296,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firebaseUser,
         loading,
         isAdmin,
+        isAuthenticated,
         isFirebaseReady: isFirebaseConfigured,
+        authModalOpen,
+        authModalReason,
+        openAuthModal,
+        closeAuthModal,
         loginAsGuest,
         loginWithEmail,
         signup,
@@ -280,6 +312,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={closeAuthModal}
+        reason={authModalReason}
+      />
     </AuthContext.Provider>
   );
 }

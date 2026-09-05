@@ -2,9 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Compass, ShieldAlert, FileText, Search } from 'lucide-react';
+import { ArrowRight, Compass, ShieldAlert, FileText, Search, Lock } from 'lucide-react';
+import { useAuth } from '@/lib/auth/authContext';
 
 export default function HeroSection() {
+  const { user, openAuthModal } = useAuth();
   return (
     <section className="relative overflow-hidden border-b border-detective-800 bg-detective-950 py-12 sm:py-20 lg:py-28 px-3.5 sm:px-6 lg:px-8">
       {/* Archival Grid & Background watermark */}
@@ -45,13 +47,23 @@ export default function HeroSection() {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2 sm:pt-4 w-full max-w-md mx-auto sm:max-w-none">
-          <Link
-            href="/cases/case-001"
-            className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence hover:bg-evidence-dark text-white px-6 sm:px-7 py-3 sm:py-3.5 font-mono text-xs uppercase tracking-widest transition-all shadow-lg hover:shadow-red-950/40 active:scale-95"
-          >
-            <span>START INVESTIGATING</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {user ? (
+            <Link
+              href="/cases/case-001"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence hover:bg-evidence-dark text-white px-6 sm:px-7 py-3 sm:py-3.5 font-mono text-xs uppercase tracking-widest transition-all shadow-lg hover:shadow-red-950/40 active:scale-95"
+            >
+              <span>START INVESTIGATING</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <button
+              onClick={() => openAuthModal('Security clearance required. Please sign in or register to begin your investigation.')}
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 rounded border border-evidence bg-evidence hover:bg-evidence-dark text-white px-6 sm:px-7 py-3 sm:py-3.5 font-mono text-xs uppercase tracking-widest transition-all shadow-lg hover:shadow-red-950/40 active:scale-95"
+            >
+              <Lock className="h-4 w-4" />
+              <span>START INVESTIGATING</span>
+            </button>
+          )}
 
           <Link
             href="/cases"
