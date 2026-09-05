@@ -69,11 +69,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md rounded border border-detective-700 bg-detective-900 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-md max-h-[92vh] flex flex-col rounded-t-2xl sm:rounded-lg border border-detective-700 bg-detective-900 shadow-2xl overflow-hidden animate-slide-up sm:animate-none">
         
         {/* Header File Stamp Tab */}
-        <div className="flex items-center justify-between border-b border-detective-800 bg-detective-950 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-detective-800 bg-detective-950 px-5 sm:px-6 py-3.5 sm:py-4 shrink-0">
           <div className="flex items-center space-x-2">
             <ShieldAlert className="h-5 w-5 text-evidence" />
             <span className="font-mono text-xs uppercase tracking-widest text-neutral-300 font-semibold">
@@ -82,14 +82,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="text-neutral-400 hover:text-neutral-200 p-1 rounded hover:bg-detective-800"
+            aria-label="Close terminal"
+            className="text-neutral-400 hover:text-neutral-200 p-1.5 rounded hover:bg-detective-800"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="p-6">
-          <div className="mb-6">
+        <div className="p-5 sm:p-6 overflow-y-auto">
+          <div className="mb-5 sm:mb-6">
             <div className="flex items-center justify-between mb-3">
               <span className="stamp-confidential">RESTRICTED DOSSIER</span>
               <div className="flex items-center space-x-1 font-mono text-[10px] text-emerald-400 bg-emerald-950/50 border border-emerald-800/40 px-2 py-0.5 rounded">

@@ -90,11 +90,11 @@ export default function AccusationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-fade-in">
-      <div className="relative w-full max-w-3xl rounded border border-detective-700 bg-detective-900 shadow-2xl my-8 overflow-hidden dossier-paper">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-fade-in">
+      <div className="relative w-full max-w-3xl max-h-[94vh] flex flex-col rounded-t-2xl sm:rounded-lg border border-detective-700 bg-detective-900 shadow-2xl my-0 sm:my-8 overflow-hidden dossier-paper animate-slide-up sm:animate-none">
         
         {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-detective-800 bg-detective-950 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-detective-800 bg-detective-950 px-5 sm:px-6 py-3.5 sm:py-4 shrink-0">
           <div className="flex items-center space-x-2">
             <Gavel className="h-5 w-5 text-evidence" />
             <span className="font-mono text-xs uppercase tracking-widest text-neutral-200 font-bold">
@@ -103,6 +103,7 @@ export default function AccusationModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close modal"
             className="text-neutral-400 hover:text-white p-1 rounded hover:bg-detective-800"
           >
             <X className="h-4 w-4" />
@@ -111,7 +112,7 @@ export default function AccusationModal({
 
         {/* Evaluation Verdict View */}
         {result ? (
-          <div className="p-6 sm:p-8 space-y-6">
+          <div className="p-4 sm:p-8 space-y-6 overflow-y-auto flex-1">
             
             {/* Verdict Stamp */}
             <div className="text-center space-y-3 pb-6 border-b border-detective-800">
@@ -247,14 +248,14 @@ export default function AccusationModal({
           </div>
         ) : (
           /* Multi-Step Accusation Form */
-          <div className="p-6 sm:p-8 space-y-6">
+          <div className="p-4 sm:p-8 space-y-5 sm:space-y-6 overflow-y-auto flex-1">
             
             {/* Step Progress Ticker */}
-            <div className="flex items-center justify-between border-b border-detective-800 pb-3 font-mono text-xs">
-              <div className="space-x-2">
+            <div className="flex flex-wrap items-center justify-between border-b border-detective-800 pb-3 font-mono text-[11px] sm:text-xs gap-1.5">
+              <div className="flex flex-wrap items-center space-x-2">
                 <span className="text-evidence font-bold">STEP 0{currentStep} OF 05</span>
                 <span className="text-neutral-500">•</span>
-                <span className="text-neutral-300 uppercase">
+                <span className="text-neutral-300 uppercase font-medium">
                   {currentStep === 1 && 'Identify Primary Culprit'}
                   {currentStep === 2 && 'Determine Modus Operandi (How)'}
                   {currentStep === 3 && 'Establish Criminal Motive (Why)'}
@@ -262,7 +263,7 @@ export default function AccusationModal({
                   {currentStep === 5 && 'Final Indictment Verification'}
                 </span>
               </div>
-              <span className="text-neutral-500 font-mono text-[11px]">CASEFILE DEDUCTION</span>
+              <span className="text-neutral-500 font-mono text-[10px] sm:text-[11px] hidden xs:inline">CASEFILE DEDUCTION</span>
             </div>
 
             {/* STEP 1: CULPRIT */}

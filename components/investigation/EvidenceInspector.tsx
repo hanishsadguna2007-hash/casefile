@@ -96,64 +96,75 @@ export default function EvidenceInspector({
       </div>
 
       {/* Main Split Grid: Left items list, Right detailed forensics card */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6">
         
-        {/* Evidence Cards List (5 columns) */}
-        <div className="lg:col-span-5 space-y-3 max-h-[700px] overflow-y-auto pr-1">
-          {filtered.map((item) => {
-            const isItemPinned = pinnedIds.includes(item.id);
-            const isItemSuspicious = suspiciousIds.includes(item.id);
-            const isCurrent = selectedEvidence?.id === item.id;
+        {/* Evidence Cards List (Horizontal carousel on mobile, Vertical list on desktop) */}
+        <div className="lg:col-span-5">
+          <div className="flex items-center justify-between lg:hidden mb-2">
+            <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">
+              Select Evidence ({filtered.length}):
+            </span>
+            <span className="font-mono text-[10px] text-neutral-500 italic">
+              ← Swipe clues →
+            </span>
+          </div>
 
-            return (
-              <div
-                key={item.id}
-                onClick={() => setSelectedEvidence(item)}
-                className={`p-4 rounded border cursor-pointer transition-all ${
-                  isCurrent
-                    ? 'border-evidence bg-detective-850 shadow-md ring-1 ring-evidence/40'
-                    : 'border-detective-800 bg-detective-900/60 hover:border-detective-700 hover:bg-detective-850'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-mono text-xs font-bold text-evidence">
-                      {item.code}
-                    </span>
-                    <span
-                      className={`font-mono text-[10px] px-2 py-0.5 rounded border uppercase tracking-wider ${getTypeBadge(
-                        item.type
-                      )}`}
-                    >
-                      {item.type}
-                    </span>
+          <div className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-y-auto gap-2.5 lg:space-y-3 lg:max-h-[700px] pb-2 lg:pb-0 scrollbar-none snap-x lg:pr-1">
+            {filtered.map((item) => {
+              const isItemPinned = pinnedIds.includes(item.id);
+              const isItemSuspicious = suspiciousIds.includes(item.id);
+              const isCurrent = selectedEvidence?.id === item.id;
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedEvidence(item)}
+                  className={`p-3 sm:p-4 rounded border cursor-pointer transition-all shrink-0 w-[230px] sm:w-[280px] lg:w-auto snap-start active:scale-95 ${
+                    isCurrent
+                      ? 'border-evidence bg-detective-850 shadow-md ring-1 ring-evidence/40'
+                      : 'border-detective-800 bg-detective-900/60 hover:border-detective-700 hover:bg-detective-850'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-mono text-xs font-bold text-evidence">
+                        {item.code}
+                      </span>
+                      <span
+                        className={`font-mono text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded border uppercase tracking-wider ${getTypeBadge(
+                          item.type
+                        )}`}
+                      >
+                        {item.type}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center space-x-1.5">
+                      {isItemPinned && (
+                        <span className="h-2 w-2 rounded-full bg-evidence" title="Pinned clue" />
+                      )}
+                      {isItemSuspicious && (
+                        <span className="h-2 w-2 rounded-full bg-amber-400" title="Suspicious" />
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex items-center space-x-1.5">
-                    {isItemPinned && (
-                      <span className="h-2 w-2 rounded-full bg-evidence" title="Pinned clue" />
-                    )}
-                    {isItemSuspicious && (
-                      <span className="h-2 w-2 rounded-full bg-amber-400" title="Suspicious" />
-                    )}
+                  <h4 className="font-serif text-sm sm:text-base font-bold text-neutral-100 truncate">
+                    {item.title}
+                  </h4>
+
+                  <p className="font-sans text-xs text-neutral-400 mt-1 line-clamp-2">
+                    {item.summary}
+                  </p>
+
+                  <div className="flex items-center justify-between font-mono text-[10px] text-neutral-500 mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-detective-800">
+                    <span className="truncate max-w-[120px]">Loc: {item.locationFound}</span>
+                    <span>{item.collectedAt}</span>
                   </div>
                 </div>
-
-                <h4 className="font-serif text-base font-bold text-neutral-100">
-                  {item.title}
-                </h4>
-
-                <p className="font-sans text-xs text-neutral-400 mt-1 line-clamp-2">
-                  {item.summary}
-                </p>
-
-                <div className="flex items-center justify-between font-mono text-[10px] text-neutral-500 mt-3 pt-2 border-t border-detective-800">
-                  <span>Loc: {item.locationFound}</span>
-                  <span>{item.collectedAt}</span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
         {/* Selected Evidence Detail Inspector (7 columns) */}

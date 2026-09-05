@@ -61,50 +61,61 @@ export default function SuspectDossier({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6">
         
-        {/* Suspects Roster Sidebar (4 cols) */}
-        <div className="lg:col-span-4 space-y-3">
-          {suspects.map((s, idx) => {
-            const status = suspectStatuses[s.id] || 'unreviewed';
-            const badge = getStatusBadge(status);
-            const isCurrent = selectedSuspect?.id === s.id;
+        {/* Suspects Roster: Horizontal Carousel on mobile, Vertical Sidebar on lg */}
+        <div className="lg:col-span-4">
+          <div className="flex items-center justify-between lg:hidden mb-2">
+            <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">
+              Select Suspect ({suspects.length}):
+            </span>
+            <span className="font-mono text-[10px] text-neutral-500 italic">
+              ← Swipe to view all →
+            </span>
+          </div>
+          
+          <div className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-2.5 lg:space-y-3 pb-2 lg:pb-0 scrollbar-none snap-x">
+            {suspects.map((s, idx) => {
+              const status = suspectStatuses[s.id] || 'unreviewed';
+              const badge = getStatusBadge(status);
+              const isCurrent = selectedSuspect?.id === s.id;
 
-            return (
-              <div
-                key={s.id}
-                onClick={() => setSelectedSuspect(s)}
-                className={`p-4 rounded border cursor-pointer transition-all ${
-                  isCurrent
-                    ? 'border-evidence bg-detective-850 shadow-md ring-1 ring-evidence/40'
-                    : 'border-detective-800 bg-detective-900/60 hover:border-detective-700 hover:bg-detective-850'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-[10px] text-neutral-500 tracking-wider">
-                    SUSPECT 0{idx + 1}
-                  </span>
-                  <span
-                    className={`font-mono text-[10px] px-2 py-0.5 rounded border uppercase tracking-wider ${badge.classes}`}
-                  >
-                    {badge.label}
-                  </span>
+              return (
+                <div
+                  key={s.id}
+                  onClick={() => setSelectedSuspect(s)}
+                  className={`p-3 sm:p-4 rounded border cursor-pointer transition-all shrink-0 w-[220px] sm:w-[260px] lg:w-auto snap-start active:scale-95 ${
+                    isCurrent
+                      ? 'border-evidence bg-detective-850 shadow-md ring-1 ring-evidence/40'
+                      : 'border-detective-800 bg-detective-900/60 hover:border-detective-700 hover:bg-detective-850'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-mono text-[10px] text-neutral-500 tracking-wider">
+                      SUSPECT 0{idx + 1}
+                    </span>
+                    <span
+                      className={`font-mono text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded border uppercase tracking-wider ${badge.classes}`}
+                    >
+                      {badge.label}
+                    </span>
+                  </div>
+
+                  <h4 className="font-serif text-sm sm:text-base font-bold text-neutral-100 truncate">
+                    {s.name}
+                  </h4>
+
+                  <p className="font-mono text-[11px] sm:text-xs text-neutral-400 mt-0.5 truncate">
+                    Age {s.age} • {s.occupation}
+                  </p>
+
+                  <p className="font-sans text-[11px] sm:text-xs text-neutral-500 mt-1 sm:mt-2 line-clamp-1 italic">
+                    {s.relationToCase}
+                  </p>
                 </div>
-
-                <h4 className="font-serif text-base font-bold text-neutral-100">
-                  {s.name}
-                </h4>
-
-                <p className="font-mono text-xs text-neutral-400 mt-0.5">
-                  Age {s.age} • {s.occupation}
-                </p>
-
-                <p className="font-sans text-xs text-neutral-500 mt-2 line-clamp-1 italic">
-                  Relation: {s.relationToCase}
-                </p>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
         {/* Detailed Suspect File (8 cols) */}

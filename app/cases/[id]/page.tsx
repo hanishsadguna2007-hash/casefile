@@ -139,38 +139,38 @@ export default function CaseInvestigationPage() {
     <div className="min-h-screen flex flex-col bg-detective-950">
       
       {/* Top Case Dashboard Header Bar */}
-      <div className="border-b border-detective-800 bg-detective-900/95 px-4 sm:px-6 lg:px-8 py-3.5 sticky top-16 z-20 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div className="border-b border-detective-800 bg-detective-900/95 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 sticky top-16 z-20 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
           
           {/* Left Case Info */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
             <Link
               href="/cases"
-              className="p-1.5 rounded text-neutral-400 hover:text-white hover:bg-detective-800 transition-colors"
+              className="p-1.5 rounded text-neutral-400 hover:text-white hover:bg-detective-800 transition-colors shrink-0"
               title="Return to Library"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
 
-            <div className="flex items-center space-x-2.5">
-              <span className="font-mono text-sm font-bold text-evidence">
+            <div className="flex items-center space-x-2 min-w-0">
+              <span className="font-mono text-xs sm:text-sm font-bold text-evidence shrink-0">
                 {mystery.caseNumber}
               </span>
               <span className="text-neutral-600 hidden sm:inline">•</span>
-              <h1 className="font-serif text-lg sm:text-xl font-bold text-neutral-100 truncate max-w-xs sm:max-w-md">
+              <h1 className="font-serif text-base sm:text-xl font-bold text-neutral-100 truncate">
                 {mystery.title}
               </h1>
             </div>
 
             {isSolved && (
-              <span className="stamp-solved text-[10px] py-0 px-1.5 hidden sm:inline-block">
-                CASE CLOSED ✓
+              <span className="stamp-solved text-[9px] sm:text-[10px] py-0 px-1.5 shrink-0">
+                CLOSED ✓
               </span>
             )}
           </div>
 
-          {/* Right Action Controls */}
-          <div className="flex items-center space-x-2.5">
+          {/* Right Action Controls (Desktop) */}
+          <div className="hidden sm:flex items-center space-x-2.5 shrink-0">
             
             {/* Hint Button */}
             <button
@@ -184,7 +184,7 @@ export default function CaseInvestigationPage() {
             {/* Solution Room Accusation CTA */}
             <button
               onClick={() => setAccusationModalOpen(true)}
-              className="flex items-center space-x-1.5 rounded border border-evidence bg-evidence hover:bg-evidence-dark text-white px-4 py-1.5 font-mono text-xs uppercase tracking-widest font-bold shadow-md transition-all"
+              className="flex items-center space-x-1.5 rounded border border-evidence bg-evidence hover:bg-evidence-dark text-white px-4 py-1.5 font-mono text-xs uppercase tracking-widest font-bold shadow-md transition-all active:scale-95"
             >
               <Gavel className="h-3.5 w-3.5" />
               <span>{isSolved ? 'Review Indictment' : 'File Accusation'}</span>
@@ -210,7 +210,7 @@ export default function CaseInvestigationPage() {
         />
 
         {/* Center Investigation Stage */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 min-w-0 overflow-y-auto pb-24 lg:pb-8">
           
           {/* TAB 1: OVERVIEW & BRIEFING */}
           {activeTab === 'overview' && (
@@ -379,6 +379,25 @@ export default function CaseInvestigationPage() {
           onUnmarkSuspicious={handleToggleSuspicious}
         />
 
+      </div>
+
+      {/* Mobile Sticky Bottom Action Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-detective-800 bg-detective-950/95 backdrop-blur-md px-3 py-2.5 flex items-center justify-between gap-2.5 shadow-2xl safe-area-bottom">
+        <button
+          onClick={() => setHintModalOpen(true)}
+          className="flex-1 flex items-center justify-center space-x-1.5 rounded border border-detective-700 bg-detective-900 py-2.5 text-xs font-mono text-neutral-300 active:scale-95 transition-all shadow-sm"
+        >
+          <HelpCircle className="h-3.5 w-3.5 text-amber-400" />
+          <span>Hints ({hintsRevealedCount}/3)</span>
+        </button>
+
+        <button
+          onClick={() => setAccusationModalOpen(true)}
+          className="flex-[1.3] flex items-center justify-center space-x-1.5 rounded border border-evidence bg-evidence text-white py-2.5 text-xs font-mono uppercase tracking-wider font-bold shadow-lg shadow-red-950/50 active:scale-95 transition-all"
+        >
+          <Gavel className="h-3.5 w-3.5" />
+          <span>{isSolved ? 'Verdict' : 'Accuse'}</span>
+        </button>
       </div>
 
       {/* Hints Modal */}

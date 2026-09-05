@@ -82,27 +82,27 @@ function CasesLibraryContent() {
   };
 
   return (
-    <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div className="min-h-screen py-6 sm:py-10 px-3.5 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       
       {/* Header Dossier Stamp Banner */}
-      <div className="mb-8 border-b border-detective-800 pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div className="mb-6 sm:mb-8 border-b border-detective-800 pb-4 sm:pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center space-x-3 mb-2">
-            <span className="stamp-confidential text-xs">OFFICIAL REPOSITORY</span>
-            <span className="font-mono text-xs uppercase tracking-wider text-neutral-400">
+          <div className="flex items-center space-x-2.5 mb-1.5 sm:mb-2">
+            <span className="stamp-confidential text-[10px] sm:text-xs">OFFICIAL REPOSITORY</span>
+            <span className="font-mono text-[10px] sm:text-xs uppercase tracking-wider text-neutral-400 truncate">
               Department of Solvable Enigmas
             </span>
           </div>
-          <h1 className="font-serif text-3xl sm:text-4xl text-neutral-100 font-bold tracking-tight">
+          <h1 className="font-serif text-2xl sm:text-4xl text-neutral-100 font-bold tracking-tight">
             Case Archive Library
           </h1>
-          <p className="font-sans text-xs sm:text-sm text-neutral-400 mt-1 max-w-2xl">
+          <p className="font-sans text-xs sm:text-sm text-neutral-400 mt-1 max-w-2xl leading-relaxed">
             Examine active police dossiers, unsolved museum thefts, dynastic temple enigmas, and modern digital crimes. All investigations are logically consistent.
           </p>
         </div>
 
-        <div className="flex items-center space-x-3 font-mono text-xs text-neutral-400 bg-detective-900 border border-detective-800 px-3.5 py-2 rounded">
-          <FolderLock className="h-4 w-4 text-evidence" />
+        <div className="flex items-center space-x-2.5 font-mono text-xs text-neutral-400 bg-detective-900 border border-detective-800 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded self-start sm:self-auto">
+          <FolderLock className="h-4 w-4 text-evidence shrink-0" />
           <span>
             {filteredCases.length} of {allCases.length} Cases Displayed
           </span>
@@ -124,7 +124,7 @@ function CasesLibraryContent() {
 
       {/* Cases Grid or Empty State */}
       {filteredCases.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredCases.map((mystery) => (
             <CaseCard
               key={mystery.id}

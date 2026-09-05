@@ -28,13 +28,13 @@ export default function ProfilePage() {
     .map(([_, prog]) => prog.attemptResult!);
 
   return (
-    <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen py-6 sm:py-10 px-3.5 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6 sm:space-y-8">
       
       {/* Header Banner */}
-      <div className="border-b border-detective-800 pb-4 flex items-center justify-between">
+      <div className="border-b border-detective-800 pb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <span className="stamp-confidential text-xs">OFFICIAL RECORD</span>
-          <h1 className="font-serif text-3xl sm:text-4xl text-neutral-100 font-bold mt-1">
+          <span className="stamp-confidential text-[10px] sm:text-xs">OFFICIAL RECORD</span>
+          <h1 className="font-serif text-2xl sm:text-4xl text-neutral-100 font-bold mt-1">
             Detective Service Record
           </h1>
         </div>
@@ -55,9 +55,9 @@ export default function ProfilePage() {
       <AchievementsGrid unlockedAchievements={user.achievements || []} />
 
       {/* Solved Cases / Indictments History */}
-      <div className="rounded border border-detective-800 bg-detective-900/60 p-6 sm:p-8 space-y-4">
-        <div className="border-b border-detective-800 pb-3 flex items-center justify-between">
-          <h3 className="font-serif text-xl font-bold text-neutral-100">
+      <div className="rounded border border-detective-800 bg-detective-900/60 p-4 sm:p-8 space-y-4">
+        <div className="border-b border-detective-800 pb-3 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-serif text-lg sm:text-xl font-bold text-neutral-100">
             Case Indictment History ({attemptedCases.length})
           </h3>
           <span className="font-mono text-xs text-neutral-500">

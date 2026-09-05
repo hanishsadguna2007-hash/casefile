@@ -47,25 +47,26 @@ export default function InvestigationSidebar({
 }: InvestigationSidebarProps) {
   const navItems: {
     id: ActiveTab;
+    shortLabel: string;
     label: string;
     icon: React.ElementType;
     badge?: number | string;
     highlight?: boolean;
   }[] = [
-    { id: 'overview', label: 'Case Briefing', icon: FileText },
-    { id: 'evidence', label: 'Evidence Files', icon: Search, badge: evidenceCount },
-    { id: 'suspects', label: 'Suspect Dossiers', icon: Users, badge: suspectsCount },
-    { id: 'witnesses', label: 'Witness Statements', icon: MessageSquare, badge: witnessCount },
-    { id: 'timeline', label: 'Timeline Chronology', icon: Clock, badge: timelineCount },
-    { id: 'locations', label: 'Crime Scene Maps', icon: MapPin },
-    { id: 'documents', label: 'Documents & Logs', icon: BookOpen, badge: documentCount },
-    { id: 'hints', label: 'Consult Hints', icon: HelpCircle, badge: `${hintsUsedCount}/3` },
-    { id: 'accuse', label: 'Formal Accusation', icon: Gavel, highlight: true },
+    { id: 'overview', shortLabel: 'Briefing', label: 'Case Briefing', icon: FileText },
+    { id: 'evidence', shortLabel: 'Evidence', label: 'Evidence Files', icon: Search, badge: evidenceCount },
+    { id: 'suspects', shortLabel: 'Suspects', label: 'Suspect Dossiers', icon: Users, badge: suspectsCount },
+    { id: 'witnesses', shortLabel: 'Witnesses', label: 'Witness Statements', icon: MessageSquare, badge: witnessCount },
+    { id: 'timeline', shortLabel: 'Timeline', label: 'Timeline Chronology', icon: Clock, badge: timelineCount },
+    { id: 'locations', shortLabel: 'Scenes', label: 'Crime Scene Maps', icon: MapPin },
+    { id: 'documents', shortLabel: 'Logs', label: 'Documents & Logs', icon: BookOpen, badge: documentCount },
+    { id: 'hints', shortLabel: 'Hints', label: 'Consult Hints', icon: HelpCircle, badge: `${hintsUsedCount}/3` },
+    { id: 'accuse', shortLabel: 'Accuse', label: 'Formal Accusation', icon: Gavel, highlight: true },
   ];
 
   return (
-    <aside className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-detective-800 bg-detective-950 p-3 lg:p-4 flex flex-col justify-between shrink-0">
-      <div className="space-y-3 lg:space-y-6">
+    <aside className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-detective-800 bg-detective-950 p-2 sm:p-3 lg:p-4 flex flex-col justify-between shrink-0 sticky top-[65px] lg:static z-20 backdrop-blur-md lg:backdrop-blur-none">
+      <div className="space-y-2 lg:space-y-6">
         
         {/* Sidebar Header (hidden on mobile, visible on lg) */}
         <div className="hidden lg:block px-2">
@@ -77,46 +78,52 @@ export default function InvestigationSidebar({
           </h4>
         </div>
 
-        {/* Nav Links: horizontal scroll on mobile, vertical stack on lg */}
-        <nav className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible space-x-1.5 lg:space-x-0 lg:space-y-1 font-mono text-xs scrollbar-none pb-1 lg:pb-0">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isCurrent = activeTab === item.id;
+        {/* Mobile: Horizontal scrollable pills with touch-optimized targets. Desktop: Vertical stack */}
+        <div className="relative">
+          <nav className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible space-x-1.5 lg:space-x-0 lg:space-y-1 font-mono text-xs scrollbar-none py-1 lg:py-0 scroll-smooth">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isCurrent = activeTab === item.id;
 
-            return (
-              <button
-                key={item.id}
-                onClick={() => onSelectTab(item.id)}
-                className={`flex items-center justify-between px-3 py-2 rounded transition-colors text-left whitespace-nowrap shrink-0 ${
-                  item.highlight
-                    ? isCurrent
-                      ? 'border border-evidence bg-evidence text-white font-bold'
-                      : 'border border-evidence/60 bg-red-950/20 text-red-400 hover:bg-evidence/20'
-                    : isCurrent
-                    ? 'border border-detective-700 bg-detective-850 text-neutral-100 font-semibold'
-                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-detective-900 border border-transparent'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <Icon className={`h-3.5 w-3.5 lg:h-4 lg:w-4 ${item.highlight ? 'text-current' : 'text-neutral-400'}`} />
-                  <span className="tracking-wider uppercase">{item.label}</span>
-                </div>
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onSelectTab(item.id)}
+                  className={`flex items-center justify-between px-3 py-2 sm:py-2.5 rounded transition-all text-left whitespace-nowrap shrink-0 min-h-[40px] sm:min-h-[44px] active:scale-95 ${
+                    item.highlight
+                      ? isCurrent
+                        ? 'border border-evidence bg-evidence text-white font-bold shadow-md shadow-red-950/40'
+                        : 'border border-evidence/60 bg-red-950/30 text-red-300 hover:bg-evidence/20'
+                      : isCurrent
+                      ? 'border border-evidence/80 bg-detective-850 text-neutral-100 font-semibold shadow-sm'
+                      : 'text-neutral-400 hover:text-neutral-200 hover:bg-detective-900 border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Icon className={`h-4 w-4 shrink-0 ${item.highlight ? 'text-current' : isCurrent ? 'text-evidence' : 'text-neutral-500'}`} />
+                    <span className="tracking-wider uppercase text-[11px] sm:text-xs">
+                      {/* Show short label on mobile, full label on desktop */}
+                      <span className="inline lg:hidden">{item.shortLabel}</span>
+                      <span className="hidden lg:inline">{item.label}</span>
+                    </span>
+                  </div>
 
-                {item.badge !== undefined && (
-                  <span
-                    className={`ml-2 text-[10px] px-1.5 py-0.5 rounded ${
-                      isCurrent
-                        ? 'bg-detective-950/80 text-white'
-                        : 'bg-detective-900 text-neutral-400 border border-detective-800'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+                  {item.badge !== undefined && (
+                    <span
+                      className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                        isCurrent
+                          ? 'bg-detective-950/80 text-white'
+                          : 'bg-detective-900 text-neutral-400 border border-detective-800'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
       </div>
 
       {/* Bottom Dispatch Alert (desktop only) */}

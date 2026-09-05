@@ -37,51 +37,51 @@ export default function FeaturedCase({ mystery }: FeaturedCaseProps) {
       <div className="relative rounded border border-detective-700 bg-detective-900 shadow-2xl overflow-hidden group">
         
         {/* Top Folder Tab Header */}
-        <div className="flex flex-wrap items-center justify-between border-b border-detective-800 bg-detective-950 px-6 py-3.5">
-          <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center justify-between border-b border-detective-800 bg-detective-950 px-4 sm:px-6 py-3 sm:py-3.5 gap-2">
+          <div className="flex items-center space-x-2.5 sm:space-x-3">
             <span className="font-mono text-xs font-bold text-evidence tracking-wider">
               {mystery.caseNumber}
             </span>
             <span className="text-neutral-600">•</span>
             <span
-              className={`rounded border px-2 py-0.5 text-[11px] font-mono uppercase tracking-wider ${catColors.bg} ${catColors.text} ${catColors.border}`}
+              className={`rounded border px-2 py-0.5 text-[10px] sm:text-[11px] font-mono uppercase tracking-wider ${catColors.bg} ${catColors.text} ${catColors.border}`}
             >
               {mystery.categoryDisplay}
             </span>
           </div>
 
-          <div className="flex items-center space-x-4 mt-2 sm:mt-0 font-mono text-xs text-neutral-400">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 font-mono text-[11px] sm:text-xs text-neutral-400">
             <div className="flex items-center space-x-1">
-              <Clock className="h-3.5 w-3.5 text-neutral-500" />
+              <Clock className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
               <span>{mystery.estimatedTime}</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Users className="h-3.5 w-3.5 text-neutral-500" />
+              <Users className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
               <span>{mystery.suspects.length} Suspects</span>
             </div>
             <div className="flex items-center space-x-1">
-              <FileSearch className="h-3.5 w-3.5 text-neutral-500" />
-              <span>{mystery.evidence.length} Evidence Clues</span>
+              <FileSearch className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
+              <span>{mystery.evidence.length} Clues</span>
             </div>
           </div>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="p-4 sm:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center space-x-3">
               <span className="stamp-confidential text-xs">UNSOLVED</span>
               <span className="text-xs font-mono text-neutral-400 uppercase">
-                Difficulty: <strong className="text-amber-400">{mystery.difficultyLabel}</strong> (Level {mystery.difficulty}/5)
+                Difficulty: <strong className="text-amber-400">{mystery.difficultyLabel}</strong> (Lvl {mystery.difficulty}/5)
               </span>
             </div>
 
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-neutral-100 group-hover:text-amber-200/90 transition-colors">
+            <h3 className="font-serif text-xl sm:text-3xl font-bold text-neutral-100 group-hover:text-amber-200/90 transition-colors leading-tight">
               {mystery.title}
             </h3>
 
-            <p className="font-serif italic text-sm text-neutral-300">
+            <p className="font-serif italic text-xs sm:text-sm text-neutral-300">
               Setting: {mystery.setting}
             </p>
 

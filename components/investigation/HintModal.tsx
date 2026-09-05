@@ -29,11 +29,11 @@ export default function HintModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-lg rounded border border-detective-700 bg-detective-900 shadow-2xl overflow-hidden dossier-paper">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-lg border border-detective-700 bg-detective-900 shadow-2xl overflow-hidden dossier-paper">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-detective-800 bg-detective-950 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-detective-800 bg-detective-950 px-5 sm:px-6 py-3.5 sm:py-4 shrink-0">
           <div className="flex items-center space-x-2">
             <HelpCircle className="h-5 w-5 text-amber-400" />
             <span className="font-mono text-xs uppercase tracking-widest text-neutral-200 font-semibold">
@@ -42,13 +42,14 @@ export default function HintModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close hints"
             className="text-neutral-400 hover:text-white p-1 rounded hover:bg-detective-800"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-5 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
           <div>
             <span className="stamp-evidence text-[10px] mb-2">SCORE PENALTY NOTICE</span>
             <h3 className="font-serif text-2xl font-bold text-neutral-100">

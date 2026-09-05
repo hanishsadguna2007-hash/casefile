@@ -79,21 +79,21 @@ export default function CaseCard({ mystery, isSolved = false }: CaseCardProps) {
       </div>
 
       {/* Bottom Metadata & CTA */}
-      <div className="pt-4 mt-5 border-t border-detective-800/80 flex items-center justify-between">
-        <div className="flex items-center space-x-3 font-mono text-xs text-neutral-400">
+      <div className="pt-4 mt-5 border-t border-detective-800/80 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center space-x-2 sm:space-x-3 font-mono text-[11px] sm:text-xs text-neutral-400">
           <div className="flex items-center space-x-1">
-            <Clock className="h-3.5 w-3.5 text-neutral-500" />
+            <Clock className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
             <span>{mystery.estimatedTime}</span>
           </div>
           <span>•</span>
           <span className="text-amber-400/90 font-medium">
-            {mystery.difficultyLabel} (Lvl {mystery.difficulty})
+            {mystery.difficultyLabel} ({mystery.difficulty}/5)
           </span>
         </div>
 
         <Link
           href={`/cases/${mystery.id}`}
-          className="inline-flex items-center space-x-1.5 rounded border border-detective-700 bg-detective-950 hover:border-evidence hover:bg-evidence hover:text-white px-3.5 py-1.5 font-mono text-xs uppercase tracking-wider text-neutral-200 transition-colors"
+          className="inline-flex items-center space-x-1.5 rounded border border-detective-700 bg-detective-950 hover:border-evidence hover:bg-evidence hover:text-white px-3.5 py-1.5 font-mono text-xs uppercase tracking-wider text-neutral-200 transition-colors active:scale-95 shrink-0"
         >
           <span>Investigate</span>
           <ArrowRight className="h-3 w-3" />
