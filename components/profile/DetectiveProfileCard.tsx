@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile } from '@/types/user';
 import { getRankBadgeColor } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/authContext';
+import { subscribeSyncState, SyncState } from '@/lib/storage/cloudSync';
 import { 
   Award, 
   CheckCircle2, 
@@ -12,7 +13,10 @@ import {
   Flame, 
   Compass, 
   Edit2, 
-  Check 
+  Check,
+  Cloud,
+  RefreshCw,
+  Smartphone
 } from 'lucide-react';
 
 interface DetectiveProfileCardProps {
@@ -23,6 +27,14 @@ export default function DetectiveProfileCard({ profile }: DetectiveProfileCardPr
   const { updateUsername } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(profile.username);
+  const [syncState, setSyncState] = useState<SyncState>('synced');
+
+  useEffect(() => {
+    const unsub = subscribeSyncState((state) => {
+      setSyncState(state);
+    });
+    return () => unsub();
+  }, []);
 
   const handleSaveName = () => {
     if (editedName.trim()) {
@@ -53,7 +65,7 @@ export default function DetectiveProfileCard({ profile }: DetectiveProfileCardPr
 
       {/* Identity & Rank Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">
             DETECTIVE IDENTITY
           </span>
@@ -90,10 +102,32 @@ export default function DetectiveProfileCard({ profile }: DetectiveProfileCardPr
               </div>
             )}
           </div>
-          <p className="font-mono text-xs text-neutral-400">
-            Deduction Experience: <strong className="text-amber-400">{profile.xp} XP</strong>
-            {profile.isGuest && ' • (Guest Session)'}
-          </p>
+          
+          <div className="flex flex-wrap items-center gap-2 pt-0.5 font-mono text-xs">
+            <span className="text-neutral-400">
+              Deduction Experience: <strong className="text-amber-400">{profile.xp} XP</strong>
+            </span>
+            <span>•</span>
+            {profile.isGuest ? (
+              <span className="text-neutral-500 flex items-center space-x-1 text-[11px]">
+                <span>(Guest Session • Sign in to save across devices)</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/50 border border-emerald-800/60 text-[11px] text-emerald-300 font-mono shadow-xs">
+                {syncState === 'syncing' ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 animate-spin text-amber-400" />
+                    <span>Syncing to Cloud Database...</span>
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Cloud Database Synced • Active Across Devices</span>
+                  </>
+                )}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="rounded border border-detective-800 bg-detective-950 px-3.5 py-1.5 sm:px-4 sm:py-2 font-mono text-xs text-neutral-400 self-start sm:self-auto">

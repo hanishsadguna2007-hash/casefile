@@ -1,6 +1,7 @@
 import { UserProfile, UserProgress, CaseAttemptRecord } from '@/types/user';
 import { SuspectStatus } from '@/types/mystery';
 import { getMysteryById } from '@/data/mysteries';
+import { saveUserProfileToCloud, mergeProfiles } from './cloudSync';
 
 const STORAGE_KEY_USER = 'casefile_user_profile_v1';
 
@@ -78,6 +79,7 @@ export const INITIAL_GUEST_PROFILE: UserProfile = {
 
 class CaseRepository {
   private activeUserId: string | null = null;
+  private notesDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   private getStorage(): Storage | null {
     if (typeof window !== 'undefined') {
@@ -107,7 +109,7 @@ class CaseRepository {
     const data = storage.getItem(key);
     if (!data) {
       if (!userId && !this.activeUserId) {
-        this.saveUserProfile(INITIAL_GUEST_PROFILE);
+        this.saveUserProfile(INITIAL_GUEST_PROFILE, undefined, true);
         return INITIAL_GUEST_PROFILE;
       }
       return INITIAL_GUEST_PROFILE;
@@ -120,13 +122,41 @@ class CaseRepository {
     }
   }
 
-  saveUserProfile(profile: UserProfile, userId?: string): void {
+  saveUserProfile(profile: UserProfile, userId?: string, skipCloud = false): void {
     const storage = this.getStorage();
     if (storage) {
       const key = this.getStorageKey(userId);
       storage.setItem(key, JSON.stringify(profile));
       // Mirror to active key
       storage.setItem(STORAGE_KEY_USER, JSON.stringify(profile));
+    }
+
+    // Trigger cloud persistence if user is logged in
+    const targetId = userId || profile.id || this.activeUserId;
+    if (!skipCloud && targetId && !profile.isGuest && targetId !== 'guest-detective-01') {
+      saveUserProfileToCloud({ ...profile, id: targetId });
+    }
+  }
+
+  hydrateFromCloud(cloudProfile: UserProfile): UserProfile {
+    const localProfile = this.getUserProfile(cloudProfile.id);
+    const merged = mergeProfiles(cloudProfile, localProfile);
+    this.saveUserProfile(merged, cloudProfile.id, true);
+    // Persist any newly merged offline progress back to cloud
+    if (merged.xp > (cloudProfile.xp || 0) || merged.casesSolved > (cloudProfile.casesSolved || 0)) {
+      saveUserProfileToCloud(merged);
+    }
+    return merged;
+  }
+
+  flushPendingSync(): void {
+    if (this.notesDebounceTimer) {
+      clearTimeout(this.notesDebounceTimer);
+      this.notesDebounceTimer = null;
+      const profile = this.getUserProfile();
+      if (!profile.isGuest && profile.id && profile.id !== 'guest-detective-01') {
+        saveUserProfileToCloud(profile);
+      }
     }
   }
 
@@ -202,7 +232,19 @@ class CaseRepository {
     current.notes = notes;
     if (current.status === 'unsolved') current.status = 'in_progress';
     profile.progress[caseId] = current;
-    this.saveUserProfile(profile);
+
+    // Save locally immediately
+    this.saveUserProfile(profile, undefined, true);
+
+    // Debounce cloud write (1200ms)
+    if (this.notesDebounceTimer) {
+      clearTimeout(this.notesDebounceTimer);
+    }
+    this.notesDebounceTimer = setTimeout(() => {
+      if (!profile.isGuest && profile.id && profile.id !== 'guest-detective-01') {
+        saveUserProfileToCloud(profile);
+      }
+    }, 1200);
   }
 
   revealHint(caseId: string): number {

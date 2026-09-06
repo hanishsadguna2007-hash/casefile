@@ -5,6 +5,11 @@ import { UserProfile } from '@/types/user';
 import { caseRepo, INITIAL_GUEST_PROFILE } from '@/lib/storage/caseRepository';
 import { calculateRank } from '@/lib/utils';
 import { 
+  fetchUserProfileFromCloud, 
+  saveUserProfileToCloud, 
+  subscribeToUserProfile 
+} from '@/lib/storage/cloudSync';
+import { 
   auth, 
   googleProvider, 
   isFirebaseConfigured,
@@ -60,23 +65,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthModalReason('');
   };
 
-  // Load and refresh current detective dossier
-  const refreshProfile = () => {
+  // Load and refresh current detective dossier (local + cloud)
+  const refreshProfile = async () => {
     const fbUser = auth?.currentUser;
     if (!fbUser) {
       setUser(null);
       return;
     }
-    const profile = caseRepo.getUserProfile(fbUser.uid);
-    if (profile) {
-      profile.rank = calculateRank(profile.xp);
-      setUser({ ...profile });
-    } else {
-      setUser(null);
+    const localProfile = caseRepo.getUserProfile(fbUser.uid);
+    if (localProfile) {
+      localProfile.rank = calculateRank(localProfile.xp);
+      setUser({ ...localProfile });
+    }
+    try {
+      const cloudProfile = await fetchUserProfileFromCloud(fbUser.uid);
+      if (cloudProfile) {
+        const hydrated = caseRepo.hydrateFromCloud(cloudProfile);
+        hydrated.rank = calculateRank(hydrated.xp);
+        setUser({ ...hydrated });
+      }
+    } catch (err) {
+      console.warn('[AuthContext] refreshProfile error:', err);
     }
   };
 
-  // Synchronize Firebase auth state
+  // Synchronize Firebase auth state and Cloud Firestore data across devices
   useEffect(() => {
     if (!auth) {
       // Unauthenticated fallback when Firebase is offline
@@ -85,44 +98,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let cloudUnsubscribe: (() => void) | null = null;
+
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
 
-      if (fbUser) {
-        // Authenticated with Firebase
-        caseRepo.setActiveUserId(fbUser.uid);
-        let profile = caseRepo.getUserProfile(fbUser.uid);
+      // Clean up previous real-time listener if any
+      if (cloudUnsubscribe) {
+        cloudUnsubscribe();
+        cloudUnsubscribe = null;
+      }
 
-        // If newly created, first time loading this UID, or marked as guest, populate real dossier
-        if (!profile || profile.id !== fbUser.uid || profile.isGuest) {
-          const defaultName = fbUser.displayName || fbUser.email?.split('@')[0] || 'Investigator';
-          const capitalizedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
-          
-          profile = {
-            ...INITIAL_GUEST_PROFILE,
-            id: fbUser.uid,
-            username: capitalizedName,
-            email: fbUser.email || undefined,
-            isGuest: false,
-            createdAt: fbUser.metadata.creationTime || new Date().toISOString(),
-            xp: 0,
-            casesSolved: 0,
-            casesAttempted: 0,
-            successRate: 0,
-            evidenceAnalyzed: 0,
-            hintsUsed: 0,
-            streak: 0,
-            rank: 'Rookie',
-            achievements: [],
-            progress: {},
-          };
-          caseRepo.saveUserProfile(profile, fbUser.uid);
+      if (fbUser) {
+        // 1. Set active user ID in repository
+        caseRepo.setActiveUserId(fbUser.uid);
+
+        // 2. Immediate optimistic render from local cache to prevent UI delay
+        let localProfile = caseRepo.getUserProfile(fbUser.uid);
+        if (localProfile && localProfile.id === fbUser.uid && !localProfile.isGuest) {
+          localProfile.rank = calculateRank(localProfile.xp);
+          setUser({ ...localProfile });
         }
 
-        profile.rank = calculateRank(profile.xp);
-        setUser({ ...profile });
+        // 3. Fetch canonical dossier from Cloud Firestore database
+        try {
+          const cloudProfile = await fetchUserProfileFromCloud(fbUser.uid);
+
+          if (cloudProfile) {
+            // Existing cloud dossier: hydrate repository and render
+            const hydrated = caseRepo.hydrateFromCloud(cloudProfile);
+            hydrated.rank = calculateRank(hydrated.xp);
+            setUser({ ...hydrated });
+          } else {
+            // New user account: initialize dossier
+            const defaultName = fbUser.displayName || fbUser.email?.split('@')[0] || 'Investigator';
+            const capitalizedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
+
+            const initialProfile: UserProfile = {
+              ...INITIAL_GUEST_PROFILE,
+              id: fbUser.uid,
+              username: capitalizedName,
+              email: fbUser.email || undefined,
+              isGuest: false,
+              createdAt: fbUser.metadata.creationTime || new Date().toISOString(),
+              xp: 0,
+              casesSolved: 0,
+              casesAttempted: 0,
+              successRate: 0,
+              evidenceAnalyzed: 0,
+              hintsUsed: 0,
+              streak: 0,
+              rank: 'Rookie',
+              achievements: [],
+              progress: {},
+            };
+
+            caseRepo.saveUserProfile(initialProfile, fbUser.uid);
+            setUser({ ...initialProfile });
+          }
+        } catch (err) {
+          console.warn('[AuthContext] Cloud fetch error on auth state change:', err);
+        }
+
+        // 4. Attach real-time cloud listener for cross-device updates
+        const unsub = subscribeToUserProfile(fbUser.uid, (remoteProfile) => {
+          const updated = caseRepo.hydrateFromCloud(remoteProfile);
+          updated.rank = calculateRank(updated.xp);
+          setUser({ ...updated });
+        });
+        if (unsub) {
+          cloudUnsubscribe = unsub;
+        }
+
       } else {
-        // Unauthenticated - require login to move forward
+        // Unauthenticated
+        caseRepo.flushPendingSync();
         caseRepo.setActiveUserId(null);
         setUser(null);
       }
@@ -130,7 +180,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (cloudUnsubscribe) cloudUnsubscribe();
+      unsubscribe();
+    };
   }, []);
 
   const loginAsGuest = () => {
@@ -217,34 +270,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await signInWithPopup(auth, googleProvider);
     if (result.user) {
       caseRepo.setActiveUserId(result.user.uid);
-      let profile = caseRepo.getUserProfile(result.user.uid);
-      if (!profile || profile.id !== result.user.uid) {
-        const name = result.user.displayName || result.user.email?.split('@')[0] || 'Investigator';
-        profile = {
-          ...INITIAL_GUEST_PROFILE,
-          id: result.user.uid,
-          username: name,
-          email: result.user.email || undefined,
-          isGuest: false,
-          createdAt: new Date().toISOString(),
-          xp: 0,
-          casesSolved: 0,
-          casesAttempted: 0,
-          successRate: 0,
-          evidenceAnalyzed: 0,
-          hintsUsed: 0,
-          streak: 0,
-          rank: 'Rookie',
-          achievements: [],
-          progress: {},
-        };
-        caseRepo.saveUserProfile(profile, result.user.uid);
-      }
-      setUser(profile);
+      // onAuthStateChanged handles cloud fetch, hydration, and real-time sync
     }
   };
 
   const logout = async (): Promise<void> => {
+    caseRepo.flushPendingSync();
     if (auth && auth.currentUser) {
       await signOut(auth);
     }

@@ -4,6 +4,7 @@ import {
   GoogleAuthProvider, 
   Auth 
 } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDQMsejlMSm9YLlpouRi4E12JnIutSriiA',
@@ -28,6 +29,10 @@ export const app: FirebaseApp | null = isFirebaseConfigured
 
 // Initialize Firebase Auth singleton
 export const auth: Auth | null = app ? getAuth(app) : null;
+
+// Initialize Cloud Firestore database singleton
+export const db: Firestore | null = app ? getFirestore(app) : null;
+export const isFirestoreConfigured = Boolean(db);
 
 // Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
