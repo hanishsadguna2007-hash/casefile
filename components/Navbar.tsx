@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/authContext';
 import { getRankBadgeColor } from '@/lib/utils';
@@ -49,8 +50,14 @@ export default function Navbar() {
           {/* Logo & Brand */}
           <div className="flex items-center space-x-4 sm:space-x-6">
             <Link href="/" className="flex items-center space-x-2.5 sm:space-x-3 group">
-              <div className="flex h-9 w-9 items-center justify-center rounded border border-detective-700 bg-detective-900 group-hover:border-evidence transition-colors shadow-sm">
-                <FolderLock className="h-5 w-5 text-evidence group-hover:scale-105 transition-transform" />
+              <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded transition-transform duration-200 group-hover:scale-105">
+                <Image
+                  src="/logo.png"
+                  alt="Casefile Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
               <div className="flex flex-col">
                 <span className="font-serif text-lg sm:text-xl tracking-wider text-neutral-100 font-bold leading-tight">

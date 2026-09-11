@@ -303,7 +303,12 @@ class CaseRepository {
     const progress = this.getCaseProgress(caseId);
     const hintsUsed = progress.hintsRevealedCount || 0;
 
-    // Base XP: 1000 * difficulty level
+    // Capture the prior status BEFORE we mutate anything
+    // This is essential for idempotency: re-attempts must not double-count stats.
+    const wasAlreadySolved = progress.status === 'solved';
+    const wasAlreadyAttempted = progress.status === 'solved' || progress.status === 'failed';
+
+    // Base XP: difficulty * 800
     const baseXP = mystery.difficulty * 800;
     // Penalty: 150 per hint
     const hintPenalty = hintsUsed * 150;
@@ -329,19 +334,26 @@ class CaseRepository {
       totalEvidenceRequired: requiredEvidence.length,
     };
 
-    // Update user profile
+    // Update progress record
     progress.status = isSolved ? 'solved' : 'failed';
     progress.completedAt = new Date().toISOString();
     progress.attemptResult = attemptRecord;
     profile.progress[caseId] = progress;
-    profile.casesAttempted += 1;
+
+    // Only increment casesAttempted on the very first attempt of this case
+    if (!wasAlreadyAttempted) {
+      profile.casesAttempted += 1;
+    }
 
     if (isSolved) {
-      profile.casesSolved += 1;
-      profile.xp += xpAwarded;
-      profile.streak += 1;
+      // Only award XP and increment casesSolved on first-time solve
+      if (!wasAlreadySolved) {
+        profile.casesSolved += 1;
+        profile.xp += xpAwarded;
+        profile.streak += 1;
+      }
 
-      // Achievements
+      // Achievements are idempotent by design (unlockAchievement checks for duplicates)
       if (hintsUsed === 0) {
         this.unlockAchievement('no_hints', profile);
       }
@@ -366,7 +378,11 @@ class CaseRepository {
         this.unlockAchievement('case_addict', profile);
       }
     } else {
-      profile.streak = 0;
+      // Only reset streak on a genuinely fresh failed attempt.
+      // Never wipe streak for re-failing a case the user already solved.
+      if (!wasAlreadySolved) {
+        profile.streak = 0;
+      }
     }
 
     // Recalculate success rate

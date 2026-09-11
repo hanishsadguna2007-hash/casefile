@@ -17,6 +17,11 @@ export const metadata: Metadata = {
     'crime mysteries',
     'logic puzzles',
   ],
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({

@@ -42,7 +42,7 @@ interface AuthContextType {
   signup: (username: string, email: string, pass: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  refreshProfile: () => void;
+  refreshProfile: () => Promise<void>;
   updateUsername: (name: string) => Promise<void>;
 }
 

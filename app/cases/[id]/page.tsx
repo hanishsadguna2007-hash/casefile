@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getMysteryById } from '@/data/mysteries';
 import { Mystery, SuspectStatus } from '@/types/mystery';
+import { CaseAttemptRecord } from '@/types/user';
 import { caseRepo } from '@/lib/storage/caseRepository';
 import { useAuth } from '@/lib/auth/authContext';
 import { getCategoryBadgeColor } from '@/lib/utils';
@@ -499,9 +500,9 @@ export default function CaseInvestigationPage() {
         mystery={mystery}
         isOpen={accusationModalOpen}
         onClose={() => setAccusationModalOpen(false)}
-        onCaseSolved={() => {
+        onCaseSolved={async (_record: CaseAttemptRecord) => {
           setIsSolved(true);
-          refreshProfile();
+          await refreshProfile();
         }}
       />
 
