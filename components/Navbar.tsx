@@ -128,8 +128,8 @@ export default function Navbar() {
                   <span className="font-mono text-xs text-neutral-300 font-medium">
                     {user.username}
                   </span>
-                  <span className="font-mono text-[11px] text-amber-500/80">
-                    {user.xp} XP
+                  <span className="font-mono text-[11px] text-amber-500/90 font-medium">
+                    {user.points ?? user.xp} PTS
                   </span>
                 </Link>
 
@@ -164,7 +164,7 @@ export default function Navbar() {
                   {user.username}
                 </span>
                 <span className="text-amber-400 font-bold">
-                  {user.xp} XP
+                  {user.points ?? user.xp} PTS
                 </span>
               </Link>
             ) : (
@@ -245,8 +245,8 @@ export default function Navbar() {
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-detective-800 font-mono text-xs">
-                    <span className="text-neutral-400">Deduction XP:</span>
-                    <span className="text-amber-400 font-bold">{user.xp} XP</span>
+                    <span className="text-neutral-400">Total Points:</span>
+                    <span className="text-amber-400 font-bold">{user.points ?? user.xp} PTS</span>
                   </div>
                 </div>
               ) : (

@@ -1,7 +1,7 @@
 import { UserProfile, UserProgress, CaseAttemptRecord } from '@/types/user';
 import { SuspectStatus } from '@/types/mystery';
 import { getMysteryById } from '@/data/mysteries';
-import { saveUserProfileToCloud, mergeProfiles } from './cloudSync';
+import { saveUserProfileToCloud, mergeProfiles, recordPointTransactionInCloud } from './cloudSync';
 
 const STORAGE_KEY_USER = 'casefile_user_profile_v1';
 
@@ -58,8 +58,11 @@ export const INITIAL_GUEST_PROFILE: UserProfile = {
   createdAt: new Date().toISOString(),
   rank: 'Investigator',
   xp: 1450,
+  points: 1450,
+  totalPoints: 1450,
   casesSolved: 1,
   casesAttempted: 2,
+
   successRate: 85,
   evidenceAnalyzed: 14,
   hintsUsed: 1,
@@ -143,7 +146,9 @@ class CaseRepository {
     const merged = mergeProfiles(cloudProfile, localProfile);
     this.saveUserProfile(merged, cloudProfile.id, true);
     // Persist any newly merged offline progress back to cloud
-    if (merged.xp > (cloudProfile.xp || 0) || merged.casesSolved > (cloudProfile.casesSolved || 0)) {
+    const mergedPts = merged.points ?? merged.xp ?? 0;
+    const cloudPts = cloudProfile.points ?? cloudProfile.xp ?? 0;
+    if (mergedPts > cloudPts || merged.casesSolved > (cloudProfile.casesSolved || 0)) {
       saveUserProfileToCloud(merged);
     }
     return merged;
@@ -346,11 +351,29 @@ class CaseRepository {
     }
 
     if (isSolved) {
-      // Only award XP and increment casesSolved on first-time solve
+      // Only award points/XP and increment casesSolved on first-time solve
       if (!wasAlreadySolved) {
         profile.casesSolved += 1;
-        profile.xp += xpAwarded;
+        const currentPoints = profile.points ?? profile.xp ?? 0;
+        const newTotalPoints = currentPoints + xpAwarded;
+        profile.xp = newTotalPoints;
+        profile.points = newTotalPoints;
+        profile.totalPoints = newTotalPoints;
         profile.streak += 1;
+
+        // Record point transaction in Cloud Firestore (users/{uid}/points_log)
+        const targetId = profile.id || this.activeUserId;
+        if (targetId && !profile.isGuest && targetId !== 'guest-detective-01') {
+          recordPointTransactionInCloud(targetId, {
+            userId: targetId,
+            points: xpAwarded,
+            totalPoints: newTotalPoints,
+            reason: `Solved Case: ${mystery.title} (${mystery.caseNumber})`,
+            caseId: mystery.id,
+            caseTitle: mystery.title,
+            timestamp: new Date().toISOString(),
+          });
+        }
       }
 
       // Achievements are idempotent by design (unlockAchievement checks for duplicates)

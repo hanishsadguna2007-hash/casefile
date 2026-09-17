@@ -47,6 +47,17 @@ export interface UserProgress {
   };
 }
 
+export interface PointTransaction {
+  id: string;
+  userId: string;
+  points: number;
+  totalPoints: number;
+  reason: string;
+  caseId?: string;
+  caseTitle?: string;
+  timestamp: string;
+}
+
 export interface UserProfile {
   id: string;
   username: string;
@@ -58,6 +69,8 @@ export interface UserProfile {
   // Stats
   rank: DetectiveRank;
   xp: number;
+  points?: number;
+  totalPoints?: number;
   casesSolved: number;
   casesAttempted: number;
   successRate: number; // percentage e.g. 82
@@ -70,3 +83,4 @@ export interface UserProfile {
   achievements: Achievement[];
   progress: UserProgress;
 }
+

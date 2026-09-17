@@ -104,25 +104,29 @@ export default function DetectiveProfileCard({ profile }: DetectiveProfileCardPr
           </div>
           
           <div className="flex flex-wrap items-center gap-2 pt-0.5 font-mono text-xs">
+            <span className="text-neutral-300">
+              Total Points: <strong className="text-amber-400 font-bold text-sm">{profile.points ?? profile.xp} PTS</strong>
+            </span>
+            <span>•</span>
             <span className="text-neutral-400">
-              Deduction Experience: <strong className="text-amber-400">{profile.xp} XP</strong>
+              Deduction XP: <strong className="text-neutral-200">{profile.xp} XP</strong>
             </span>
             <span>•</span>
             {profile.isGuest ? (
               <span className="text-neutral-500 flex items-center space-x-1 text-[11px]">
-                <span>(Guest Session • Sign in to save across devices)</span>
+                <span>(Guest Session • Sign in to save points to cloud database)</span>
               </span>
             ) : (
               <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/50 border border-emerald-800/60 text-[11px] text-emerald-300 font-mono shadow-xs">
                 {syncState === 'syncing' ? (
                   <>
                     <RefreshCw className="h-3 w-3 animate-spin text-amber-400" />
-                    <span>Syncing to Cloud Database...</span>
+                    <span>Syncing Points to Cloud Database...</span>
                   </>
                 ) : (
                   <>
                     <Cloud className="h-3.5 w-3.5 text-emerald-400" />
-                    <span>Cloud Database Synced • Active Across Devices</span>
+                    <span>Cloud Points Synced • Firestore Live</span>
                   </>
                 )}
               </span>

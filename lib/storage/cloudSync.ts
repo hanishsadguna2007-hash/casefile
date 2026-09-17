@@ -1,6 +1,17 @@
 import { db } from '@/lib/firebase';
-import { UserProfile, UserProgress, Achievement } from '@/types/user';
-import { doc, getDoc, setDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { UserProfile, UserProgress, Achievement, PointTransaction } from '@/types/user';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  onSnapshot, 
+  Unsubscribe,
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  limit 
+} from 'firebase/firestore';
 
 export type SyncState = 'idle' | 'syncing' | 'synced' | 'error';
 
@@ -37,6 +48,7 @@ function sanitizeForFirestore<T>(obj: T): T {
 
 /**
  * Fetches user profile document from Firestore (`users/{uid}`).
+ * Ensures points and xp fields are uniformly populated.
  */
 export async function fetchUserProfileFromCloud(uid: string): Promise<UserProfile | null> {
   if (!db || !uid) return null;
@@ -49,6 +61,11 @@ export async function fetchUserProfileFromCloud(uid: string): Promise<UserProfil
     if (snap.exists()) {
       updateSyncState('synced');
       const data = snap.data() as UserProfile;
+      // Ensure points and xp are synchronized from cloud
+      const totalPoints = data.points ?? data.xp ?? 0;
+      data.points = totalPoints;
+      data.xp = totalPoints;
+      data.totalPoints = totalPoints;
       return data;
     }
 
@@ -62,7 +79,9 @@ export async function fetchUserProfileFromCloud(uid: string): Promise<UserProfil
 }
 
 /**
- * Persists user profile to Cloud Firestore (`users/{uid}`).
+ * Persists user profile and points to Cloud Firestore.
+ * 1. Writes to `users/{uid}` with points, xp, and dossiers
+ * 2. Mirrors summary to `user_points/{uid}` for global rank & leaderboard queries
  */
 export async function saveUserProfileToCloud(profile: UserProfile): Promise<boolean> {
   if (!db || !profile || !profile.id || profile.isGuest) {
@@ -72,12 +91,41 @@ export async function saveUserProfileToCloud(profile: UserProfile): Promise<bool
   try {
     updateSyncState('syncing');
     const userDocRef = doc(db, 'users', profile.id);
-    const sanitized = sanitizeForFirestore({
+    const totalPoints = profile.points ?? profile.xp ?? 0;
+
+    const sanitizedUser = sanitizeForFirestore({
       ...profile,
+      points: totalPoints,
+      xp: totalPoints,
+      totalPoints,
       updatedAt: new Date().toISOString(),
     });
 
-    await setDoc(userDocRef, sanitized, { merge: true });
+    // 1. Save user dossier in Cloud Firestore
+    await setDoc(userDocRef, sanitizedUser, { merge: true });
+
+    // 2. Also mirror to user_points collection in Cloud Firestore for cross-user points querying
+    try {
+      const pointsDocRef = doc(db, 'user_points', profile.id);
+      await setDoc(
+        pointsDocRef,
+        sanitizeForFirestore({
+          userId: profile.id,
+          username: profile.username || 'Detective',
+          points: totalPoints,
+          xp: totalPoints,
+          totalPoints,
+          rank: profile.rank || 'Rookie',
+          casesSolved: profile.casesSolved || 0,
+          casesAttempted: profile.casesAttempted || 0,
+          updatedAt: new Date().toISOString(),
+        }),
+        { merge: true }
+      );
+    } catch (ptsErr: any) {
+      console.warn('[CloudSync] user_points mirror warning:', ptsErr?.message || ptsErr);
+    }
+
     updateSyncState('synced');
     return true;
   } catch (err: any) {
@@ -86,6 +134,57 @@ export async function saveUserProfileToCloud(profile: UserProfile): Promise<bool
     return false;
   }
 }
+
+/**
+ * Records an immutable point event in Cloud Firestore subcollection `users/{uid}/points_log/{txId}`.
+ * This stores the exact breakdown of how points were awarded or updated.
+ */
+export async function recordPointTransactionInCloud(
+  userId: string,
+  transaction: Omit<PointTransaction, 'id'>
+): Promise<boolean> {
+  if (!db || !userId || userId === 'guest-detective-01') return false;
+
+  try {
+    const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const txDocRef = doc(db, 'users', userId, 'points_log', txId);
+    
+    await setDoc(
+      txDocRef,
+      sanitizeForFirestore({
+        id: txId,
+        ...transaction,
+      })
+    );
+    return true;
+  } catch (err: any) {
+    console.warn('[CloudSync] Failed to record point transaction in cloud:', err?.message || err);
+    return false;
+  }
+}
+
+/**
+ * Fetches the user's historical points transactions from Cloud Firestore (`users/{uid}/points_log`).
+ */
+export async function fetchUserPointsHistoryFromCloud(userId: string): Promise<PointTransaction[]> {
+  if (!db || !userId || userId === 'guest-detective-01') return [];
+
+  try {
+    const pointsColRef = collection(db, 'users', userId, 'points_log');
+    const q = query(pointsColRef, orderBy('timestamp', 'desc'), limit(50));
+    const snap = await getDocs(q);
+
+    const transactions: PointTransaction[] = [];
+    snap.forEach((docSnap) => {
+      transactions.push(docSnap.data() as PointTransaction);
+    });
+    return transactions;
+  } catch (err: any) {
+    console.warn('[CloudSync] Failed to fetch points history from cloud:', err?.message || err);
+    return [];
+  }
+}
+
 
 /**
  * Subscribes to real-time updates for a user's cloud document.
@@ -205,12 +304,19 @@ export function mergeProfiles(cloud: UserProfile, local: UserProfile): UserProfi
     Object.keys(mergedProgress).length
   );
 
+  const mergedPoints = Math.max(
+    cloud.points ?? cloud.xp ?? 0,
+    local.points ?? local.xp ?? 0
+  );
+
   return {
     ...cloud,
     username: cloud.username || local.username,
     email: cloud.email || local.email,
     isGuest: false,
-    xp: Math.max(cloud.xp || 0, local.xp || 0),
+    xp: mergedPoints,
+    points: mergedPoints,
+    totalPoints: mergedPoints,
     casesSolved: Math.max(cloud.casesSolved || 0, solvedCount),
     casesAttempted: attemptedCount,
     successRate: attemptedCount > 0 ? Math.round((Math.max(cloud.casesSolved || 0, solvedCount) / attemptedCount) * 100) : 0,

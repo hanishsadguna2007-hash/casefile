@@ -74,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const localProfile = caseRepo.getUserProfile(fbUser.uid);
     if (localProfile) {
+      localProfile.points = localProfile.points ?? localProfile.xp ?? 0;
+      localProfile.xp = localProfile.points;
       localProfile.rank = calculateRank(localProfile.xp);
       setUser({ ...localProfile });
     }
@@ -81,6 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cloudProfile = await fetchUserProfileFromCloud(fbUser.uid);
       if (cloudProfile) {
         const hydrated = caseRepo.hydrateFromCloud(cloudProfile);
+        hydrated.points = hydrated.points ?? hydrated.xp ?? 0;
+        hydrated.xp = hydrated.points;
         hydrated.rank = calculateRank(hydrated.xp);
         setUser({ ...hydrated });
       }
@@ -134,35 +138,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const defaultName = fbUser.displayName || fbUser.email?.split('@')[0] || 'Investigator';
             const capitalizedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
 
-            const initialProfile: UserProfile = {
-              ...INITIAL_GUEST_PROFILE,
-              id: fbUser.uid,
-              username: capitalizedName,
-              email: fbUser.email || undefined,
-              isGuest: false,
-              createdAt: fbUser.metadata.creationTime || new Date().toISOString(),
-              xp: 0,
-              casesSolved: 0,
-              casesAttempted: 0,
-              successRate: 0,
-              evidenceAnalyzed: 0,
-              hintsUsed: 0,
-              streak: 0,
-              rank: 'Rookie',
-              achievements: [],
-              progress: {},
-            };
+              const initialProfile: UserProfile = {
+                ...INITIAL_GUEST_PROFILE,
+                id: fbUser.uid,
+                username: capitalizedName,
+                email: fbUser.email || undefined,
+                isGuest: false,
+                createdAt: fbUser.metadata.creationTime || new Date().toISOString(),
+                xp: 0,
+                points: 0,
+                totalPoints: 0,
+                casesSolved: 0,
+                casesAttempted: 0,
+                successRate: 0,
+                evidenceAnalyzed: 0,
+                hintsUsed: 0,
+                streak: 0,
+                rank: 'Rookie',
+                achievements: [],
+                progress: {},
+              };
 
-            caseRepo.saveUserProfile(initialProfile, fbUser.uid);
-            setUser({ ...initialProfile });
-          }
-        } catch (err) {
+              caseRepo.saveUserProfile(initialProfile, fbUser.uid);
+              setUser({ ...initialProfile });
+            }
+          } catch (err) {
           console.warn('[AuthContext] Cloud fetch error on auth state change:', err);
         }
 
         // 4. Attach real-time cloud listener for cross-device updates
         const unsub = subscribeToUserProfile(fbUser.uid, (remoteProfile) => {
           const updated = caseRepo.hydrateFromCloud(remoteProfile);
+          updated.points = updated.points ?? updated.xp ?? 0;
+          updated.xp = updated.points;
           updated.rank = calculateRank(updated.xp);
           setUser({ ...updated });
         });
@@ -224,6 +232,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isGuest: false,
           createdAt: new Date().toISOString(),
           xp: 0,
+          points: 0,
+          totalPoints: 0,
           casesSolved: 0,
           casesAttempted: 0,
           successRate: 0,
@@ -248,6 +258,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isGuest: false,
         createdAt: new Date().toISOString(),
         xp: 0,
+        points: 0,
+        totalPoints: 0,
         casesSolved: 0,
         casesAttempted: 0,
         successRate: 0,

@@ -15,6 +15,7 @@ import {
   RotateCcw, 
   ChevronRight,
   ShieldAlert,
+  Database,
   X
 } from 'lucide-react';
 
@@ -156,10 +157,10 @@ export default function AccusationModal({
 
               <div className="rounded border border-detective-800 bg-detective-950 p-3.5">
                 <span className="text-[10px] uppercase tracking-wider text-neutral-500 block mb-1">
-                  DEDUCTION SCORE
+                  POINTS AWARDED
                 </span>
                 <span className="text-2xl font-bold text-amber-400">
-                  +{result.xpAwarded} XP
+                  +{result.xpAwarded} PTS
                 </span>
               </div>
 
@@ -181,6 +182,13 @@ export default function AccusationModal({
                 </span>
               </div>
             </div>
+
+            {result.isSolved && (
+              <div className="flex items-center justify-center space-x-2 rounded border border-emerald-800/60 bg-emerald-950/40 p-3 text-xs font-mono text-emerald-300">
+                <Database className="h-4 w-4 text-emerald-400 shrink-0" />
+                <span>+{result.xpAwarded} Points recorded to your Detective Dossier in Cloud Database</span>
+              </div>
+            )}
 
             {/* Full Debrief Narrative Walkthrough */}
             <div className="rounded border border-detective-800 bg-detective-950 p-6 space-y-4">
