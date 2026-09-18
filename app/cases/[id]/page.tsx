@@ -34,7 +34,7 @@ import {
 export default function CaseInvestigationPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, loading, openAuthModal, refreshProfile } = useAuth();
+  const { user, loading, openAuthModal, refreshProfile, awardPoints } = useAuth();
   const caseId = params.id as string;
 
   const mystery = getMysteryById(caseId);
@@ -54,7 +54,7 @@ export default function CaseInvestigationPage() {
   // Load persistent case progress
   useEffect(() => {
     if (mystery && user) {
-      const progress = caseRepo.getCaseProgress(mystery.id);
+      const progress = caseRepo.getCaseProgress(mystery.id, user.id);
       setSuspectStatuses(progress.suspectStatuses || {});
       setPinnedEvidenceIds(progress.pinnedEvidenceIds || []);
       setSuspiciousEvidenceIds(progress.suspiciousEvidenceIds || []);
@@ -174,20 +174,31 @@ export default function CaseInvestigationPage() {
 
   // Handlers
   const handleUpdateSuspectStatus = (suspectId: string, status: SuspectStatus) => {
-    caseRepo.updateSuspectStatus(mystery.id, suspectId, status);
+    caseRepo.updateSuspectStatus(mystery.id, suspectId, status, user?.id);
     setSuspectStatuses((prev) => ({ ...prev, [suspectId]: status }));
   };
 
-  const handleTogglePin = (evidenceId: string) => {
-    const isPinned = caseRepo.togglePinnedEvidence(mystery.id, evidenceId);
+  const handleTogglePin = async (evidenceId: string) => {
+    const { isPinned, isFirstPin } = caseRepo.togglePinnedEvidence(mystery.id, evidenceId, user?.id);
     setPinnedEvidenceIds((prev) =>
       isPinned ? [...prev, evidenceId] : prev.filter((id) => id !== evidenceId)
     );
-    refreshProfile();
+
+    // Award +25 PTS for analyzing and pinning forensic evidence for the first time
+    if (isFirstPin && isPinned) {
+      await awardPoints(
+        25,
+        `Forensic Discovery: Pinned clue in ${mystery.caseNumber}`,
+        mystery.id,
+        mystery.title
+      );
+    } else {
+      await refreshProfile();
+    }
   };
 
   const handleToggleSuspicious = (evidenceId: string) => {
-    const isSusp = caseRepo.toggleSuspiciousEvidence(mystery.id, evidenceId);
+    const isSusp = caseRepo.toggleSuspiciousEvidence(mystery.id, evidenceId, user?.id);
     setSuspiciousEvidenceIds((prev) =>
       isSusp ? [...prev, evidenceId] : prev.filter((id) => id !== evidenceId)
     );
@@ -195,11 +206,11 @@ export default function CaseInvestigationPage() {
 
   const handleSaveNotes = (updatedNotes: string) => {
     setNotes(updatedNotes);
-    caseRepo.saveCaseNotes(mystery.id, updatedNotes);
+    caseRepo.saveCaseNotes(mystery.id, updatedNotes, user?.id);
   };
 
   const handleRevealHint = () => {
-    const newCount = caseRepo.revealHint(mystery.id);
+    const newCount = caseRepo.revealHint(mystery.id, user?.id);
     setHintsRevealedCount(newCount);
     refreshProfile();
   };

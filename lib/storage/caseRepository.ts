@@ -108,12 +108,23 @@ class CaseRepository {
     const storage = this.getStorage();
     if (!storage) return INITIAL_GUEST_PROFILE;
 
-    const key = this.getStorageKey(userId);
+    const targetId = userId !== undefined ? userId : this.activeUserId;
+    const key = this.getStorageKey(targetId || undefined);
     const data = storage.getItem(key);
     if (!data) {
-      if (!userId && !this.activeUserId) {
+      if (!targetId) {
         this.saveUserProfile(INITIAL_GUEST_PROFILE, undefined, true);
         return INITIAL_GUEST_PROFILE;
+      }
+      // Check fallback active key in storage
+      const fallbackData = storage.getItem(STORAGE_KEY_USER);
+      if (fallbackData) {
+        try {
+          const parsed = JSON.parse(fallbackData);
+          if (parsed.id === targetId) {
+            return parsed;
+          }
+        } catch { /* ignore fallback error */ }
       }
       return INITIAL_GUEST_PROFILE;
     }
@@ -127,15 +138,15 @@ class CaseRepository {
 
   saveUserProfile(profile: UserProfile, userId?: string, skipCloud = false): void {
     const storage = this.getStorage();
+    const targetId = userId || profile.id || this.activeUserId || undefined;
     if (storage) {
-      const key = this.getStorageKey(userId);
+      const key = this.getStorageKey(targetId);
       storage.setItem(key, JSON.stringify(profile));
       // Mirror to active key
       storage.setItem(STORAGE_KEY_USER, JSON.stringify(profile));
     }
 
     // Trigger cloud persistence if user is logged in
-    const targetId = userId || profile.id || this.activeUserId;
     if (!skipCloud && targetId && !profile.isGuest && targetId !== 'guest-detective-01') {
       saveUserProfileToCloud({ ...profile, id: targetId });
     }
@@ -159,14 +170,15 @@ class CaseRepository {
       clearTimeout(this.notesDebounceTimer);
       this.notesDebounceTimer = null;
       const profile = this.getUserProfile();
-      if (!profile.isGuest && profile.id && profile.id !== 'guest-detective-01') {
-        saveUserProfileToCloud(profile);
+      const targetId = profile.id || this.activeUserId || undefined;
+      if (!profile.isGuest && targetId && targetId !== 'guest-detective-01') {
+        saveUserProfileToCloud({ ...profile, id: targetId });
       }
     }
   }
 
-  getCaseProgress(caseId: string): UserProgress[string] {
-    const profile = this.getUserProfile();
+  getCaseProgress(caseId: string, userId?: string): UserProgress[string] {
+    const profile = this.getUserProfile(userId);
     if (profile.progress[caseId]) {
       return profile.progress[caseId];
     }
@@ -182,25 +194,29 @@ class CaseRepository {
     };
   }
 
-  updateSuspectStatus(caseId: string, suspectId: string, status: SuspectStatus): void {
-    const profile = this.getUserProfile();
-    const current = this.getCaseProgress(caseId);
+  updateSuspectStatus(caseId: string, suspectId: string, status: SuspectStatus, userId?: string): void {
+    const profile = this.getUserProfile(userId);
+    const current = this.getCaseProgress(caseId, userId);
     current.suspectStatuses[suspectId] = status;
     if (current.status === 'unsolved') current.status = 'in_progress';
     profile.progress[caseId] = current;
-    this.saveUserProfile(profile);
+    const targetId = userId || profile.id || this.activeUserId || undefined;
+    this.saveUserProfile(profile, targetId);
   }
 
-  togglePinnedEvidence(caseId: string, evidenceId: string): boolean {
-    const profile = this.getUserProfile();
-    const current = this.getCaseProgress(caseId);
+  togglePinnedEvidence(caseId: string, evidenceId: string, userId?: string): { isPinned: boolean; isFirstPin: boolean } {
+    const profile = this.getUserProfile(userId);
+    const current = this.getCaseProgress(caseId, userId);
     const index = current.pinnedEvidenceIds.indexOf(evidenceId);
     let isPinned = false;
+    let isFirstPin = false;
+
     if (index >= 0) {
       current.pinnedEvidenceIds.splice(index, 1);
     } else {
       current.pinnedEvidenceIds.push(evidenceId);
       isPinned = true;
+      isFirstPin = true;
       profile.evidenceAnalyzed += 1;
     }
     if (current.status === 'unsolved') current.status = 'in_progress';
@@ -208,16 +224,17 @@ class CaseRepository {
 
     // Check achievement for 4 pinned clues
     if (current.pinnedEvidenceIds.length >= 4) {
-      this.unlockAchievement('first_clue', profile);
+      this.unlockAchievement('first_clue', profile, userId);
     }
 
-    this.saveUserProfile(profile);
-    return isPinned;
+    const targetId = userId || profile.id || this.activeUserId || undefined;
+    this.saveUserProfile(profile, targetId);
+    return { isPinned, isFirstPin };
   }
 
-  toggleSuspiciousEvidence(caseId: string, evidenceId: string): boolean {
-    const profile = this.getUserProfile();
-    const current = this.getCaseProgress(caseId);
+  toggleSuspiciousEvidence(caseId: string, evidenceId: string, userId?: string): boolean {
+    const profile = this.getUserProfile(userId);
+    const current = this.getCaseProgress(caseId, userId);
     const index = current.suspiciousEvidenceIds.indexOf(evidenceId);
     let isSuspicious = false;
     if (index >= 0) {
@@ -227,38 +244,41 @@ class CaseRepository {
       isSuspicious = true;
     }
     profile.progress[caseId] = current;
-    this.saveUserProfile(profile);
+    const targetId = userId || profile.id || this.activeUserId || undefined;
+    this.saveUserProfile(profile, targetId);
     return isSuspicious;
   }
 
-  saveCaseNotes(caseId: string, notes: string): void {
-    const profile = this.getUserProfile();
-    const current = this.getCaseProgress(caseId);
+  saveCaseNotes(caseId: string, notes: string, userId?: string): void {
+    const profile = this.getUserProfile(userId);
+    const current = this.getCaseProgress(caseId, userId);
     current.notes = notes;
     if (current.status === 'unsolved') current.status = 'in_progress';
     profile.progress[caseId] = current;
 
+    const targetId = userId || profile.id || this.activeUserId || undefined;
     // Save locally immediately
-    this.saveUserProfile(profile, undefined, true);
+    this.saveUserProfile(profile, targetId, true);
 
     // Debounce cloud write (1200ms)
     if (this.notesDebounceTimer) {
       clearTimeout(this.notesDebounceTimer);
     }
     this.notesDebounceTimer = setTimeout(() => {
-      if (!profile.isGuest && profile.id && profile.id !== 'guest-detective-01') {
-        saveUserProfileToCloud(profile);
+      if (!profile.isGuest && targetId && targetId !== 'guest-detective-01') {
+        saveUserProfileToCloud({ ...profile, id: targetId });
       }
     }, 1200);
   }
 
-  revealHint(caseId: string): number {
-    const profile = this.getUserProfile();
-    const current = this.getCaseProgress(caseId);
+  revealHint(caseId: string, userId?: string): number {
+    const profile = this.getUserProfile(userId);
+    const current = this.getCaseProgress(caseId, userId);
     current.hintsRevealedCount = Math.min(3, (current.hintsRevealedCount || 0) + 1);
     profile.hintsUsed += 1;
     profile.progress[caseId] = current;
-    this.saveUserProfile(profile);
+    const targetId = userId || profile.id || this.activeUserId || undefined;
+    this.saveUserProfile(profile, targetId);
     return current.hintsRevealedCount;
   }
 
@@ -270,12 +290,14 @@ class CaseRepository {
       motiveId: string;
       criticalEvidenceIds: string[];
       durationMinutes?: number;
-    }
+    },
+    userId?: string
   ): {
     isSolved: boolean;
     accuracyPercentage: number;
     xpAwarded: number;
     attemptRecord: CaseAttemptRecord;
+    updatedProfile: UserProfile;
   } {
     const mystery = getMysteryById(caseId);
     if (!mystery) {
@@ -304,24 +326,24 @@ class CaseRepository {
       requiredEvidence.length > 0 ? matchedEvidence.length / requiredEvidence.length : 1;
     accuracy += Math.round(evidenceRatio * 20);
 
-    const profile = this.getUserProfile();
-    const progress = this.getCaseProgress(caseId);
+    const profile = this.getUserProfile(userId);
+    const progress = this.getCaseProgress(caseId, userId);
     const hintsUsed = progress.hintsRevealedCount || 0;
 
     // Capture the prior status BEFORE we mutate anything
-    // This is essential for idempotency: re-attempts must not double-count stats.
     const wasAlreadySolved = progress.status === 'solved';
     const wasAlreadyAttempted = progress.status === 'solved' || progress.status === 'failed';
 
-    // Base XP: difficulty * 800
-    const baseXP = mystery.difficulty * 800;
-    // Penalty: 150 per hint
-    const hintPenalty = hintsUsed * 150;
-    // Accuracy scaling
-    const rawXP = Math.round((baseXP * (accuracy / 100)) - hintPenalty);
-    const xpAwarded = Math.max(100, rawXP);
-
     const isSolved = culpritCorrect && accuracy >= 60;
+
+    // Calculate XP/Points
+    let xpAwarded = 0;
+    if (isSolved) {
+      const baseXP = mystery.difficulty * 800;
+      const hintPenalty = hintsUsed * 150;
+      const rawXP = Math.round((baseXP * (accuracy / 100)) - hintPenalty);
+      xpAwarded = Math.max(100, rawXP);
+    }
 
     const attemptRecord: CaseAttemptRecord = {
       caseId: mystery.id,
@@ -350,6 +372,8 @@ class CaseRepository {
       profile.casesAttempted += 1;
     }
 
+    const targetId = userId || profile.id || this.activeUserId || undefined;
+
     if (isSolved) {
       // Only award points/XP and increment casesSolved on first-time solve
       if (!wasAlreadySolved) {
@@ -362,7 +386,6 @@ class CaseRepository {
         profile.streak += 1;
 
         // Record point transaction in Cloud Firestore (users/{uid}/points_log)
-        const targetId = profile.id || this.activeUserId;
         if (targetId && !profile.isGuest && targetId !== 'guest-detective-01') {
           recordPointTransactionInCloud(targetId, {
             userId: targetId,
@@ -378,51 +401,51 @@ class CaseRepository {
 
       // Achievements are idempotent by design (unlockAchievement checks for duplicates)
       if (hintsUsed === 0) {
-        this.unlockAchievement('no_hints', profile);
+        this.unlockAchievement('no_hints', profile, userId);
       }
       if (accuracy === 100) {
-        this.unlockAchievement('perfect_deduction', profile);
+        this.unlockAchievement('perfect_deduction', profile, userId);
       }
       if (attemptRecord.durationMinutes < 15) {
-        this.unlockAchievement('speed_investigator', profile);
+        this.unlockAchievement('speed_investigator', profile, userId);
       }
       if (mystery.category === 'robbery') {
         const solvedRobberies = Object.values(profile.progress).filter(
           (p) => p.status === 'solved' && p.attemptResult?.caseId.startsWith('case-00')
         ).length;
         if (solvedRobberies >= 3) {
-          this.unlockAchievement('master_of_heists', profile);
+          this.unlockAchievement('master_of_heists', profile, userId);
         }
       }
       if (mystery.category === 'mythology') {
-        this.unlockAchievement('keeper_of_legends', profile);
+        this.unlockAchievement('keeper_of_legends', profile, userId);
       }
       if (profile.xp >= 5000) {
-        this.unlockAchievement('case_addict', profile);
+        this.unlockAchievement('case_addict', profile, userId);
       }
     } else {
       // Only reset streak on a genuinely fresh failed attempt.
-      // Never wipe streak for re-failing a case the user already solved.
       if (!wasAlreadySolved) {
         profile.streak = 0;
       }
     }
 
     // Recalculate success rate
-    profile.successRate = Math.round((profile.casesSolved / profile.casesAttempted) * 100);
+    profile.successRate = Math.round((profile.casesSolved / Math.max(1, profile.casesAttempted)) * 100);
 
-    this.saveUserProfile(profile);
+    this.saveUserProfile(profile, targetId);
 
     return {
       isSolved,
       accuracyPercentage: accuracy,
-      xpAwarded,
+      xpAwarded: isSolved ? (wasAlreadySolved ? 0 : xpAwarded) : 0,
       attemptRecord,
+      updatedProfile: profile,
     };
   }
 
-  unlockAchievement(achievementId: string, currentProfile?: UserProfile): void {
-    const profile = currentProfile || this.getUserProfile();
+  unlockAchievement(achievementId: string, currentProfile?: UserProfile, userId?: string): boolean {
+    const profile = currentProfile || this.getUserProfile(userId);
     const alreadyUnlocked = profile.achievements.some((a) => a.id === achievementId);
     if (!alreadyUnlocked) {
       const template = DEFAULT_ACHIEVEMENTS.find((a) => a.id === achievementId);
@@ -431,11 +454,30 @@ class CaseRepository {
           ...template,
           unlockedAt: new Date().toISOString(),
         });
+        const bonusPts = 100;
+        const currentPoints = profile.points ?? profile.xp ?? 0;
+        const newTotalPoints = currentPoints + bonusPts;
+        profile.points = newTotalPoints;
+        profile.xp = newTotalPoints;
+        profile.totalPoints = newTotalPoints;
+
+        const targetId = userId || profile.id || this.activeUserId || undefined;
         if (!currentProfile) {
-          this.saveUserProfile(profile);
+          this.saveUserProfile(profile, targetId);
         }
+        if (targetId && !profile.isGuest && targetId !== 'guest-detective-01') {
+          recordPointTransactionInCloud(targetId, {
+            userId: targetId,
+            points: bonusPts,
+            totalPoints: newTotalPoints,
+            reason: `Achievement Unlocked: ${template.title}`,
+            timestamp: new Date().toISOString(),
+          });
+        }
+        return true;
       }
     }
+    return false;
   }
 }
 

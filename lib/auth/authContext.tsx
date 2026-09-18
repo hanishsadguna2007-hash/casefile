@@ -7,7 +7,8 @@ import { calculateRank } from '@/lib/utils';
 import { 
   fetchUserProfileFromCloud, 
   saveUserProfileToCloud, 
-  subscribeToUserProfile 
+  subscribeToUserProfile,
+  recordPointTransactionInCloud 
 } from '@/lib/storage/cloudSync';
 import { 
   auth, 
@@ -44,6 +45,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateUsername: (name: string) => Promise<void>;
+  awardPoints: (amount: number, reason: string, caseId?: string, caseTitle?: string) => Promise<number>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -332,6 +334,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (firebaseUser !== null || !isFirebaseConfigured)
   );
 
+  const awardPoints = async (
+    amount: number,
+    reason: string,
+    caseId?: string,
+    caseTitle?: string
+  ): Promise<number> => {
+    if (amount <= 0) return user?.points ?? user?.xp ?? 0;
+
+    const targetUid = user?.id || auth?.currentUser?.uid;
+    const currentPoints = user?.points ?? user?.xp ?? 0;
+    const newTotal = currentPoints + amount;
+    const newRank = calculateRank(newTotal);
+
+    const updatedUser: UserProfile = {
+      ...(user || INITIAL_GUEST_PROFILE),
+      id: targetUid || user?.id || 'detective',
+      points: newTotal,
+      xp: newTotal,
+      totalPoints: newTotal,
+      rank: newRank,
+    };
+
+    // 1. Instant local state update for zero-latency navbar/profile sync
+    setUser(updatedUser);
+
+    // 2. Persist to local repository
+    if (targetUid) {
+      caseRepo.saveUserProfile(updatedUser, targetUid, true);
+    } else {
+      caseRepo.saveUserProfile(updatedUser, undefined, true);
+    }
+
+    // 3. Persist to Cloud Firestore (both user profile doc and points transaction log)
+    if (targetUid && !updatedUser.isGuest && targetUid !== 'guest-detective-01') {
+      try {
+        await Promise.all([
+          saveUserProfileToCloud(updatedUser),
+          recordPointTransactionInCloud(targetUid, {
+            userId: targetUid,
+            points: amount,
+            totalPoints: newTotal,
+            reason,
+            caseId,
+            caseTitle,
+            timestamp: new Date().toISOString(),
+          }),
+        ]);
+      } catch (err) {
+        console.warn('[AuthContext] awardPoints cloud sync error:', err);
+      }
+    }
+
+    return newTotal;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -352,6 +409,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         refreshProfile,
         updateUsername,
+        awardPoints,
       }}
     >
       {children}

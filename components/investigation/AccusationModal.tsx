@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Mystery, Suspect, EvidenceItem } from '@/types/mystery';
 import { caseRepo } from '@/lib/storage/caseRepository';
 import { CaseAttemptRecord } from '@/types/user';
+import { useAuth } from '@/lib/auth/authContext';
 import confetti from 'canvas-confetti';
 import { 
   Gavel, 
@@ -32,6 +33,7 @@ export default function AccusationModal({
   onClose,
   onCaseSolved,
 }: AccusationModalProps) {
+  const { user, awardPoints, refreshProfile } = useAuth();
   const [selectedCulpritId, setSelectedCulpritId] = useState<string>('');
   const [selectedMethodId, setSelectedMethodId] = useState<string>('');
   const [selectedMotiveId, setSelectedMotiveId] = useState<string>('');
@@ -55,19 +57,22 @@ export default function AccusationModal({
     );
   };
 
-  const handleFinalSubmit = () => {
+  const handleFinalSubmit = async () => {
     setSubmitting(true);
-    setTimeout(() => {
-      const evalResult = caseRepo.evaluateAccusation(mystery.id, {
-        culpritId: selectedCulpritId,
-        methodId: selectedMethodId,
-        motiveId: selectedMotiveId,
-        criticalEvidenceIds: selectedEvidenceIds,
-        durationMinutes: 20,
-      });
+    try {
+      const evalResult = caseRepo.evaluateAccusation(
+        mystery.id,
+        {
+          culpritId: selectedCulpritId,
+          methodId: selectedMethodId,
+          motiveId: selectedMotiveId,
+          criticalEvidenceIds: selectedEvidenceIds,
+          durationMinutes: 20,
+        },
+        user?.id
+      );
 
       setResult(evalResult);
-      setSubmitting(false);
 
       if (evalResult.isSolved) {
         confetti({
@@ -76,9 +81,26 @@ export default function AccusationModal({
           origin: { y: 0.6 },
           colors: ['#b91c1c', '#d97706', '#059669', '#ffffff'],
         });
+
+        // Award points immediately to local state and persist to Cloud Database
+        if (evalResult.xpAwarded > 0) {
+          await awardPoints(
+            evalResult.xpAwarded,
+            `Solved Case: ${mystery.title} (${mystery.caseNumber})`,
+            mystery.id,
+            mystery.title
+          );
+        } else {
+          await refreshProfile();
+        }
+
         onCaseSolved(evalResult.attemptRecord);
       }
-    }, 800);
+    } catch (err) {
+      console.error('Error submitting indictment:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleReset = () => {
@@ -159,8 +181,8 @@ export default function AccusationModal({
                 <span className="text-[10px] uppercase tracking-wider text-neutral-500 block mb-1">
                   POINTS AWARDED
                 </span>
-                <span className="text-2xl font-bold text-amber-400">
-                  +{result.xpAwarded} PTS
+                <span className={`text-2xl font-bold ${result.isSolved ? 'text-amber-400' : 'text-neutral-500'}`}>
+                  {result.isSolved ? `+${result.xpAwarded} PTS` : '0 PTS'}
                 </span>
               </div>
 
@@ -183,10 +205,19 @@ export default function AccusationModal({
               </div>
             </div>
 
-            {result.isSolved && (
+            {result.isSolved ? (
               <div className="flex items-center justify-center space-x-2 rounded border border-emerald-800/60 bg-emerald-950/40 p-3 text-xs font-mono text-emerald-300">
                 <Database className="h-4 w-4 text-emerald-400 shrink-0" />
-                <span>+{result.xpAwarded} Points recorded to your Detective Dossier in Cloud Database</span>
+                <span>
+                  {result.xpAwarded > 0
+                    ? `+${result.xpAwarded} Points recorded to your Detective Dossier in Cloud Database`
+                    : 'Case already solved previously. Dossier status verified in Cloud Database.'}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center space-x-2 rounded border border-amber-800/40 bg-amber-950/30 p-3 text-xs font-mono text-amber-300">
+                <ShieldAlert className="h-4 w-4 text-amber-400 shrink-0" />
+                <span>Indictment inconclusive. 0 points awarded. Review evidence board and try again.</span>
               </div>
             )}
 
